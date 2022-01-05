@@ -1,0 +1,135 @@
+#!/bin/sh
+
+# This tool harvests software metadata from source code repositories and makes it available as codemeta
+
+die() {
+    echo "[harvester fatal error] $*">&2
+    exit 2
+}
+
+error() {
+    echo "[harvester error] $*">&2
+}
+
+info() {
+    echo "[harvester info] $*">&2
+}
+
+usage() {
+    echo "codemeta-harvester [--cachedir path] [--outputdir path] [CONFIG_FILE_OR_DIRECTORY] ...">&2
+}
+
+missing=0
+DEPENDENCIES="git sed python dasel codemetapy cffconvert"
+for dependency in $DEPENDENCIES; do
+    if ! command -v "$dependency" >/dev/null 2>/dev/null; then
+        error "dependency $dependency not found" && missing=1
+    fi
+done
+[ "$missing" -eq 1 ] && die "there are missing dependencies"
+
+[ -n "$TMPDIR" ] || TMPDIR="/tmp"
+
+CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
+OUTPUTDIR=$(realpath .)
+
+while :; do
+    case $1 in
+        -h|--help)
+            usage
+            exit
+            ;;
+        -C|--cachedir)
+            CACHEDIR=$2
+            shift
+            ;;
+        -O|--outputdir)
+            OUTPUTDIR="$(realpath $2)"
+            shift
+            ;;
+        -?*)
+            die "Unknown option: -$1"
+            ;;
+        *)
+            break
+    esac
+
+    shift
+done
+
+mkdir -p "$CACHEDIR" || die "Unable to create cache directory $CACHEDIR"
+
+harvest() {
+    # Harvest metadata from the current directory
+    ID="$1"
+    if [ -e codemeta.json ]; then
+        info "found codemeta for $ID"
+        #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
+        if dasel -n -f codemeta.json > /dev/null; then
+            cp codemeta.json "$OUTPUTDIR/$ID.codemeta.json"
+        else
+            error "codemeta.json for $ID is not well-formed"
+        fi
+    elif [ -e CITATION.cff ]; then
+        info "found CITATION.cff for $ID, converting to codemeta"
+        if ! cffconvert -i CITATION.cff -o "$OUTDIR/$ID.codemeta.json" -f codemeta; then
+            rm "$OUTDIR/$ID.json" 2>/dev/null
+            error "CITATION.cff to codemeta conversion for $ID failed"
+        fi
+    elif [ -e pyproject.toml ]; then
+        info "found pyproject.toml, converting to codemeta"
+        #TODO
+    elif [ -e setup.py ]; then
+        info "found python setup, converting to codemeta"
+        if python setup.py egg_info; then
+            #TODO
+            echo "todo"
+        else
+            error "python setup.py to codemeta conversion failed (failed to generate egg_info)"
+        fi
+    fi
+}
+
+process() {
+    #read a configuration file and harvest the source
+    CONFIGFILE="$1"
+    ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
+    SOURCEREPO=$(dasel -r yaml ".source" < "$CONFIGFILE")
+    if [ -z "$SOURCEREPO" ]; then
+        die "invalid configuration: $ID"
+    fi
+    info "Processing $ID ($SOURCEREPO)"
+    if [ -d "$CACHEDIR/$ID" ]; then
+        cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
+        if git pull; then
+            harvest "$ID"
+        else
+            error "Failed to git pull $SOURCEREPO"
+        fi
+    else
+        cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
+        if git clone "$SOURCEREPO" "$CACHEDIR/$ID"; then
+            cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
+            harvest "$ID"
+        else
+            error "Failed to git clone $SOURCEREPO"
+        fi
+    fi
+}
+
+if [ $# -eq 0 ]; then
+    #no configuration provided, just harvest current directory
+    ID="$(basename "$(pwd)")"
+    harvest "$ID" && mv "$ID.codemeta.json" codemeta.json
+else
+    #configuration files/directory provided, process them
+    for TARGET in "$@"; do
+        if [ -f "$TARGET" ]; then
+            process "$TARGET"
+        elif [ -d "$TARGET" ]; then
+            for SUBTARGET in "$TARGET"/*.yml; do
+                process "$SUBTARGET"
+            done
+        fi
+    done
+fi
