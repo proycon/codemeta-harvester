@@ -77,7 +77,7 @@ harvest() {
             error "CITATION.cff to codemeta conversion for $ID failed"
         fi
     elif [ -e setup.py ]; then
-        info "found python setup, converting to codemeta"
+        info "found python setup for $ID, converting to codemeta"
         if ! codemetapy --with-entrypoints > "$OUTPUTDIR/$ID.codemeta.json"; then
             rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
             error "python setup.py to codemeta conversion failed (codemetapy failed)"
@@ -113,7 +113,7 @@ process() {
 }
 
 if [ $# -eq 0 ]; then
-    #no configuration provided, just harvest current directory
+    #no configuration provided, just harvest only current project
     ID="$(basename "$(pwd)")"
     harvest "$ID" && mv "$ID.codemeta.json" codemeta.json
 else
