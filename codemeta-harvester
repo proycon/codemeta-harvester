@@ -20,7 +20,7 @@ usage() {
 }
 
 missing=0
-DEPENDENCIES="git sed python dasel codemetapy cffconvert"
+DEPENDENCIES="git sed python3 dasel codemetapy cffconvert"
 for dependency in $DEPENDENCIES; do
     if ! command -v "$dependency" >/dev/null 2>/dev/null; then
         error "dependency $dependency not found" && missing=1
