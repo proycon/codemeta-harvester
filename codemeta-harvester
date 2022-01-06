@@ -73,19 +73,14 @@ harvest() {
     elif [ -e CITATION.cff ]; then
         info "found CITATION.cff for $ID, converting to codemeta"
         if ! cffconvert -i CITATION.cff -o "$OUTDIR/$ID.codemeta.json" -f codemeta; then
-            rm "$OUTDIR/$ID.json" 2>/dev/null
+            rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
             error "CITATION.cff to codemeta conversion for $ID failed"
         fi
-    elif [ -e pyproject.toml ]; then
-        info "found pyproject.toml, converting to codemeta"
-        #TODO
     elif [ -e setup.py ]; then
         info "found python setup, converting to codemeta"
-        if python setup.py egg_info; then
-            #TODO
-            echo "todo"
-        else
-            error "python setup.py to codemeta conversion failed (failed to generate egg_info)"
+        if ! codemetapy --with-entrypoints > "$OUTPUTDIR/$ID.codemeta.json"; then
+            rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
+            error "python setup.py to codemeta conversion failed (codemetapy failed)"
         fi
     fi
 }
