@@ -80,7 +80,7 @@ harvest() {
         fi
     elif [ -e setup.py ]; then
         info "found python setup for $ID, converting to codemeta"
-        if ! codemetapy --with-entrypoints -o "$OUTPUTDIR/$ID.codemeta.json"; then
+        if ! codemetapy --with-entrypoints -O "$OUTPUTDIR/$ID.codemeta.json"; then
             rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
             error "python setup.py to codemeta conversion failed (codemetapy failed)"
             return 1
@@ -94,10 +94,12 @@ harvest() {
 get_latest_version() {
     #Finds the latest git tag or falls back to returning the git default branch (usually master or main)
     #Assumes some kind of semantic versioning (possibly with a v prefix)
-    TAG=$(git tag -l | grep -E "^v?[0-9]+(\.[0-9])*" | sort -t. -k 1.2,1n -k 2,2n -k 3,3n -k 4,4n)
-    if [ -z "$TAG"]; then
+    TAG=$(git tag -l | grep -E "^v?[0-9]+(\.[0-9])*" | sort -t. -k 1.2,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1)
+    if [ -z "$TAG" ]; then
         info "No releases found, falling back to default git branch!"
         git_default_branch
+    else
+        echo "$TAG"
     fi
 }
 
@@ -108,19 +110,20 @@ git_default_branch() {
 
 process() {
     #read a configuration file and harvest the source
+    cd "$WORKDIR"
     CONFIGFILE="$1"
     ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
-    SOURCEREPO=$(dasel -r yaml ".source" < "$CONFIGFILE")
+    SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
-    REF=$(dasel -r yaml ".ref" < "$CONFIGFILE")
-    if [ -z "$SOURCEREPO" ]; then
+    REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
+    if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
         die "invalid configuration: $ID"
     fi
     info "Processing $ID ($SOURCEREPO)"
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
         if git pull --tags; then
-            if [ -n "$REF" ]; then
+            if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
             fi
             info "Using $REF"
@@ -134,7 +137,7 @@ process() {
         cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
         if git clone "$SOURCEREPO" "$CACHEDIR/$ID"; then
             cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
-            if [ -n "$REF" ]; then
+            if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
             fi
             info "Using $REF"
@@ -153,6 +156,7 @@ if [ $# -eq 0 ]; then
     harvest "$ID" && mv "$ID.codemeta.json" codemeta.json
 else
     #configuration files/directory provided, process them
+    WORKDIR=$(pwd)
     for TARGET in "$@"; do
         if [ -f "$TARGET" ]; then
             process "$TARGET"
