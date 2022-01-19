@@ -122,12 +122,12 @@ process() {
     info "Processing $ID ($SOURCEREPO)"
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
-        if git pull --tags; then
+        if git fetch origin --tags; then
             if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
             fi
             info "Using $REF"
-            git checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
+            git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
             harvest "$ID"
         else
             error "Failed to git pull $SOURCEREPO"
@@ -140,8 +140,8 @@ process() {
             if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
             fi
-            info "Using $REF"
-            git checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
+            info "Using $REF for $ID"
+            git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
             harvest "$ID"
         else
             error "Failed to git clone $SOURCEREPO"
