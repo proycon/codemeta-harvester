@@ -60,7 +60,7 @@ done
 mkdir -p "$CACHEDIR" || die "Unable to create cache directory $CACHEDIR"
 
 harvest() {
-    # Harvest metadata from the current directory
+    # Harvest metadata from the current directory and convert it to codemeta
     ID="$1"
     if [ -e codemeta.json ]; then
         info "found codemeta for $ID"
@@ -114,6 +114,7 @@ process() {
     CONFIGFILE="$1"
     ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
     SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
+    REPOPATH=$(dasel --null -r yaml ".path" < "$CONFIGFILE")
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
     REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
@@ -128,6 +129,9 @@ process() {
             fi
             info "Using $REF"
             git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
+            if [ -n "$REPOPATH" ] || [ "$REPOPATH" = "null" ]; then
+                cd "$REPOPATH"
+            fi
             harvest "$ID"
         else
             error "Failed to git pull $SOURCEREPO"
@@ -142,6 +146,9 @@ process() {
             fi
             info "Using $REF for $ID"
             git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
+            if [ -n "$REPOPATH" ] || [ "$REPOPATH" = "null" ]; then
+                cd "$REPOPATH"
+            fi
             harvest "$ID"
         else
             error "Failed to git clone $SOURCEREPO"
