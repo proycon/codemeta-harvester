@@ -32,6 +32,7 @@ done
 
 CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
 OUTPUTDIR=$(realpath .)
+CODEMETAPY_ARGS="--all" #enables all recommended extensions
 
 while :; do
     case $1 in
@@ -57,38 +58,63 @@ while :; do
     shift
 done
 
-mkdir -p "$CACHEDIR" || die "Unable to create cache directory $CACHEDIR"
+mkdir -p "$CACHEDIR" "$CACHEDIR/tmp" || die "Unable to create cache directory $CACHEDIR"
 
 harvest() {
     # Harvest metadata from the current directory and convert it to codemeta
     ID="$1"
+    REF="$2" #git ref
+    #First we grab all possible metadata and store it in the tmp dir
     if [ -e codemeta.json ]; then
         info "found codemeta for $ID"
         #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
         if dasel -n -f codemeta.json > /dev/null; then
-            cp codemeta.json "$OUTPUTDIR/$ID.codemeta.json"
+            cp codemeta.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
+            #                               ^-- lowest number indicates highest priority
         else
             error "codemeta.json for $ID is not well-formed"
             return 1
         fi
-    elif [ -e CITATION.cff ]; then
+    fi
+
+    if [ -e CITATION.cff ]; then
         info "found CITATION.cff for $ID, converting to codemeta"
-        if ! cffconvert -i CITATION.cff -o "$OUTDIR/$ID.codemeta.json" -f codemeta; then
-            rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
+        if ! cffconvert -i CITATION.cff -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta; then
             error "CITATION.cff to codemeta conversion for $ID failed"
             return 1
         fi
-    elif [ -e setup.py ]; then
+    fi
+
+    if [ -e setup.py ] || [ -e pyproject.toml ]; then
         info "found python setup for $ID, converting to codemeta"
-        if ! codemetapy --with-entrypoints -O "$OUTPUTDIR/$ID.codemeta.json"; then
-            rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
+        if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json"; then
             error "python setup.py to codemeta conversion failed (codemetapy failed)"
             return 1
         fi
-    else
-        error "No metadata found for $ID"
+    fi
+
+    if [ -e README.md ]; then
+        if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "README.md"; then
+            error "README to codemeta conversion failed (proceeding regardless!)"
+        fi
+    fi
+
+    files=$(ls -r "$CACHEDIR"/tmp/??."$ID".codemeta.json)
+    echo $files
+
+    if [ -z "$files" ]; then
+        error "No metadata sources found for $ID"
         return 1
     fi
+
+    #Last we reconsiliate all metadata using codemetapy
+    #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
+    if ! codemetapy $CODEMETAPY_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files; then
+        rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
+        error "Failed to consolidate metadata $ID"
+        return 1
+    fi
+    rm -rf "$CACHEDIR/tmp/"??".$ID.codemeta.json"
 }
 
 get_latest_version() {
@@ -129,10 +155,10 @@ process() {
             fi
             info "Using $REF"
             git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
-            if [ -n "$REPOPATH" ] || [ "$REPOPATH" = "null" ]; then
+            if [ -n "$REPOPATH" ] && [ "$REPOPATH" != "null" ]; then
                 cd "$REPOPATH"
             fi
-            harvest "$ID"
+            harvest "$ID" "$REF"
         else
             error "Failed to git pull $SOURCEREPO"
             return 1
@@ -146,10 +172,10 @@ process() {
             fi
             info "Using $REF for $ID"
             git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
-            if [ -n "$REPOPATH" ] || [ "$REPOPATH" = "null" ]; then
+            if [ -n "$REPOPATH" ]  && [ "$REPOPATH" != "null" ]; then
                 cd "$REPOPATH"
             fi
-            harvest "$ID"
+            harvest "$ID" "$REF"
         else
             error "Failed to git clone $SOURCEREPO"
             return 1
