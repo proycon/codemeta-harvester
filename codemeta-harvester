@@ -2,6 +2,8 @@
 
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 
+SCRIPTDIR="$(dirname "$0")"
+
 die() {
     echo "[harvester fatal error] $*">&2
     exit 2
@@ -95,6 +97,11 @@ harvest() {
             error "python setup.py to codemeta conversion failed (codemetapy failed)"
             return 1
         fi
+    fi
+
+    SPDX=$("$SCRIPTDIR/detect-license.sh")
+    if [ -n "$SPDX" ]; then
+        echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
     fi
 
     for f in README.md README README.TXT README.rst;  do

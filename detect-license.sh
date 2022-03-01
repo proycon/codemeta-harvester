@@ -1,5 +1,6 @@
 #!/bin/sh
 
+
 # This tool attempts to detect the license from the full license text
 # and returns an SPDX identifier. It only supports a very limited set of common open source licenses
 
@@ -18,23 +19,29 @@ for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
     echo "Trying $file ...">&2
     TEXT=$(head -n 10 "$file" | tr "[:lower:]" "[:upper:]")
     case "$TEXT" in
-        *"GNU LESSER GENERAL PUBLIC LICENSE"*)
+        *"GNU LESSER GENERAL PUBLIC LICENSE"*|*"GNU LESSER GENERAL PUBLIC LICENCE"*)
             LICENSE="LGPL"
             ;;
-        *"GNU AFFERO GENERAL PUBLIC LICENSE"*)
+        *"GNU AFFERO GENERAL PUBLIC LICENSE"*|*"GNU AFFERO GENERAL PUBLIC LICENCE"*)
             LICENSE="AGPL"
             ;;
-        *"GNU GENERAL PUBLIC LICENSE"*)
+        *"GNU GENERAL PUBLIC LICENSE"*|*"GNU GENERAL PUBLIC LICENCE"*)
             LICENSE="GPL"
             ;;
-        *"APACHE LICENSE"*)
+        *"APACHE LICENSE"*|*"APACHE LICENCE"*)
             LICENSE="Apache"
             ;;
-        *"MIT LICENSE"*)
+        *"MIT LICENSE"*|*"MIT LICENCE"*)
             LICENSE="MIT"
             ;;
-        *"ECLIPE PUBLIC LICENSE"*)
+        *"ECLIPSE PUBLIC LICENSE"*|*"ECLIPSE PUBLIC LICENCE"*)
             LICENSE="EPL"
+            ;;
+        *"MOZILLA PUBLIC LICENSE"*|*"MOZILLA PUBLIC LICENCE"*)
+            LICENSE="MPL"
+            ;;
+        *"EUROPEAN UNION PUBLIC LICENSE"*|*"EUROPEAN UNION PUBLIC LICENCE"*)
+            LICENSE="EUPL"
             ;;
         *)
             LICENSE=""
@@ -45,7 +52,7 @@ for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
         *"V3.0"*|*"VERSION 3.0"*|*"VERSION 3"*)
             VERSION="3.0"
             ;;
-        *"V2.1"*|"VERSION 2.1"*)
+        *"V2.1"*|*"VERSION 2.1"*)
             VERSION="2.1"
             ;;
         *"V2.0"*|*"VERSION 2.0"*|*"VERSION 2"*)
@@ -54,7 +61,7 @@ for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
         *"V1.1"*|*"VERSION 1.1"*)
             VERSION="1.1"
             ;;
-        *"v1.0"*|*"VERSION 1.0"*|*"VERSION 1"*)
+        *"V1.0"*|*"VERSION 1.0"*|*"VERSION 1"*)
             VERSION="1.0"
             ;;
         *)
@@ -63,7 +70,7 @@ for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
     esac
 
     case "$TEXT" in
-        *"or any later version")
+        *"OR ANY LATER VERSION"*)
             QUALIFIER="or-later"
             ;;
         *)
@@ -73,7 +80,7 @@ for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
 
 
     if [ -n "$LICENSE" ]; then
-        if [ "$LICENSE" == "MIT" ]; then
+        if [ "$LICENSE" = "MIT" ]; then
             #no version
             echo $LICENSE
             exit 0
