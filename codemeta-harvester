@@ -64,6 +64,7 @@ harvest() {
     # Harvest metadata from the current directory and convert it to codemeta
     ID="$1"
     REF="$2" #git ref
+    CODEMETAPY_EXTRA_ARGS="$3"
     #First we grab all possible metadata and store it in the tmp dir
     if [ -e codemeta.json ]; then
         info "found codemeta for $ID"
@@ -109,7 +110,7 @@ harvest() {
 
     #Last we reconsiliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
-    if ! codemetapy $CODEMETAPY_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files; then
+    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files; then
         rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         error "Failed to consolidate metadata $ID"
         return 1
@@ -147,6 +148,7 @@ process() {
         die "invalid configuration: $ID"
     fi
     info "Processing $ID ($SOURCEREPO)"
+    CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
         if git fetch origin --tags; then
@@ -158,7 +160,7 @@ process() {
             if [ -n "$REPOPATH" ] && [ "$REPOPATH" != "null" ]; then
                 cd "$REPOPATH"
             fi
-            harvest "$ID" "$REF"
+            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS"
         else
             error "Failed to git pull $SOURCEREPO"
             return 1
@@ -175,7 +177,7 @@ process() {
             if [ -n "$REPOPATH" ]  && [ "$REPOPATH" != "null" ]; then
                 cd "$REPOPATH"
             fi
-            harvest "$ID" "$REF"
+            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS"
         else
             error "Failed to git clone $SOURCEREPO"
             return 1
