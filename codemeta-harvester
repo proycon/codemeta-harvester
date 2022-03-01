@@ -78,13 +78,16 @@ harvest() {
         fi
     fi
 
-    if [ -e CITATION.cff ]; then
-        info "found CITATION.cff for $ID, converting to codemeta"
-        if ! cffconvert -i CITATION.cff -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta; then
-            error "CITATION.cff to codemeta conversion for $ID failed"
-            return 1
+    for f in CITATION.cff CITATION.CFF CITATION; do
+        if [ -e "$f" ]; then
+            info "found CITATION.cff for $ID, converting to codemeta"
+            if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta; then
+                error "CITATION.cff to codemeta conversion for $ID failed"
+                return 1
+            fi
+            break
         fi
-    fi
+    done
 
     if [ -e setup.py ] || [ -e pyproject.toml ]; then
         info "found python setup for $ID, converting to codemeta"
@@ -94,11 +97,14 @@ harvest() {
         fi
     fi
 
-    if [ -e README.md ]; then
-        if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "README.md"; then
-            error "README to codemeta conversion failed (proceeding regardless!)"
+    for f in README.md README README.TXT README.rst;  do
+        if [ -e "$f" ]; then
+            if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f"; then
+                error "README to codemeta conversion failed (proceeding regardless!)"
+            fi
+            break
         fi
-    fi
+    done
 
     files=$(ls -r "$CACHEDIR"/tmp/??."$ID".codemeta.json)
     echo $files
