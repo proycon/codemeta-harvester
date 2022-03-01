@@ -108,12 +108,15 @@ harvest() {
         return 1
     fi
 
-    #Last we reconsiliate all metadata using codemetapy
+    #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
+    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files"
     if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files; then
         rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         error "Failed to consolidate metadata $ID"
         return 1
+    else
+        info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
     rm -rf "$CACHEDIR/tmp/"??".$ID.codemeta.json"
 }
@@ -188,7 +191,15 @@ process() {
 if [ $# -eq 0 ]; then
     #no configuration provided, just harvest only current project
     ID="$(basename "$(pwd)")"
-    harvest "$ID" && mv "$ID.codemeta.json" codemeta.json
+    info "Attempting to guess source repo"
+    SOURCEREPO=$(git remote get-url origin)
+    if [ -n "$SOURCEREPO" ]; then
+        info "Source repo is $SOURCEREPO"
+        CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
+    else
+        CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\""
+    fi
+    harvest "$ID" "" "$CODEMETAPY_EXTRA_ARGS" && mv "$ID.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
 else
     #configuration files/directory provided, process them
     WORKDIR=$(pwd)
