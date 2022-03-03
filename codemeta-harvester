@@ -242,7 +242,11 @@ if [ $# -eq 0 ]; then
     else
         CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\""
     fi
-    harvest "$ID" "" "$CODEMETAPY_EXTRA_ARGS" && mv "$ID.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
+    if harvest "$ID" "" "$CODEMETAPY_EXTRA_ARGS"; then
+        if [ ! -e "codemeta.json" ]; then
+            mv "$ID.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
+        fi
+    fi
 else
     #configuration files/directory provided, process them
     WORKDIR=$(pwd)
