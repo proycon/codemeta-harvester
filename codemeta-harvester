@@ -3,18 +3,36 @@
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 
 SCRIPTDIR="$(dirname "$0")"
+DEBUG=0
 
 die() {
+    flushlog
     echo "[harvester fatal error] $*">&2
     exit 2
 }
 
 error() {
+    flushlog
     echo "[harvester error] $*">&2
 }
 
 info() {
     echo "[harvester info] $*">&2
+}
+
+debug() {
+    if [ "$DEBUG" -gt 0 ]; then
+        echo "[harvester debug] $*">&2
+    fi
+}
+
+flushlog() {
+    if [ "$DEBUG" -gt 0 ] && [ -e "$TMPLOG" ]; then
+        echo "-- begin log --" >&2
+        cat "$TMPLOG" >&2
+        echo "-- end log --" >&2
+        rm "$TMPLOG"
+    fi
 }
 
 usage() {
@@ -50,6 +68,9 @@ while :; do
             OUTPUTDIR="$(realpath $2)"
             shift
             ;;
+        --debug)
+            DEBUG=1
+            ;;
         -?*)
             die "Unknown option: -$1"
             ;;
@@ -59,6 +80,8 @@ while :; do
 
     shift
 done
+
+TMPLOG="$CACHEDIR/codemeta-harvester.debug"
 
 mkdir -p "$CACHEDIR" "$CACHEDIR/tmp" || die "Unable to create cache directory $CACHEDIR"
 
@@ -83,38 +106,41 @@ harvest() {
     for f in CITATION.cff CITATION.CFF CITATION; do
         if [ -e "$f" ]; then
             info "found CITATION.cff for $ID, converting to codemeta"
-            if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta; then
+            if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
                 error "CITATION.cff to codemeta conversion for $ID failed"
                 return 1
             fi
+            flushlog
             break
         fi
     done
 
     if [ -e setup.py ] || [ -e pyproject.toml ]; then
         info "found python setup for $ID, converting to codemeta"
-        if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json"; then
+        if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
             error "python setup.py to codemeta conversion failed (codemetapy failed)"
             return 1
         fi
+        flushlog
     fi
 
-    SPDX=$("$SCRIPTDIR/detect-license.sh")
+    SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
     if [ -n "$SPDX" ]; then
         echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
     fi
+    flushlog
 
     for f in README.md README README.TXT README.rst;  do
         if [ -e "$f" ]; then
-            if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f"; then
+            if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
                 error "README to codemeta conversion failed (proceeding regardless!)"
             fi
+            flushlog
             break
         fi
     done
 
     files=$(ls -r "$CACHEDIR"/tmp/??."$ID".codemeta.json)
-    echo $files
 
     if [ -z "$files" ]; then
         error "No metadata sources found for $ID"
@@ -124,11 +150,12 @@ harvest() {
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
     info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files"
-    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files; then
+    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
         rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         error "Failed to consolidate metadata $ID"
         return 1
     else
+        flushlog
         info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
     rm -rf "$CACHEDIR/tmp/"??".$ID.codemeta.json"
