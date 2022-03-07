@@ -95,6 +95,8 @@ harvest() {
     CODEMETAPY_EXTRA_ARGS="$3"
     #First we grab all possible metadata and store it in the tmp dir
     if [ -e codemeta.json ]; then
+        #If there is an explicit codemeta.json go, will forego on all other detection methods
+        #and assume it it the sole authoritative source for metadata.
         info "found codemeta for $ID"
         #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
         if dasel -n -f codemeta.json > /dev/null; then
@@ -104,44 +106,48 @@ harvest() {
             error "codemeta.json for $ID is not well-formed"
             return 1
         fi
-    fi
+    else
+        #No codemeta found, automatically extract from other sources.
+        #(This allows for recombining from multiple sources)
 
-    for f in CITATION.cff CITATION.CFF CITATION; do
-        if [ -e "$f" ]; then
-            info "found CITATION.cff for $ID, converting to codemeta"
-            if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
-                error "CITATION.cff to codemeta conversion for $ID failed"
+        for f in CITATION.cff CITATION.CFF CITATION; do
+            if [ -e "$f" ]; then
+                info "found CITATION.cff for $ID, converting to codemeta"
+                if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
+                    error "CITATION.cff to codemeta conversion for $ID failed"
+                    return 1
+                fi
+                flushlog
+                break
+            fi
+        done
+
+        if [ -e setup.py ] || [ -e pyproject.toml ]; then
+            info "found python setup for $ID, converting to codemeta"
+            if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
+                error "python setup.py to codemeta conversion failed (codemetapy failed)"
                 return 1
             fi
             flushlog
-            break
         fi
-    done
 
-    if [ -e setup.py ] || [ -e pyproject.toml ]; then
-        info "found python setup for $ID, converting to codemeta"
-        if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
-            error "python setup.py to codemeta conversion failed (codemetapy failed)"
-            return 1
+        SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
+        if [ -n "$SPDX" ]; then
+            echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
         fi
         flushlog
-    fi
 
-    SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
-    if [ -n "$SPDX" ]; then
-        echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
-    fi
-    flushlog
-
-    for f in README.md README README.TXT README.rst;  do
-        if [ -e "$f" ]; then
-            if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
-                error "README to codemeta conversion failed (proceeding regardless!)"
+        for f in README.md README README.TXT README.rst;  do
+            if [ -e "$f" ]; then
+                if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
+                    error "README to codemeta conversion failed (proceeding regardless!)"
+                fi
+                flushlog
+                break
             fi
-            flushlog
-            break
-        fi
-    done
+        done
+
+    fi
 
     files=$(ls -r "$CACHEDIR"/tmp/??."$ID".codemeta.json)
 
