@@ -95,7 +95,7 @@ harvest() {
     CODEMETAPY_EXTRA_ARGS="$3"
     #First we grab all possible metadata and store it in the tmp dir
     if [ -e codemeta.json ]; then
-        #If there is an explicit codemeta.json go, will forego on all other detection methods
+        #If there is an explicit codemeta.json, we will forego on all other detection methods
         #and assume it it the sole authoritative source for metadata.
         info "found codemeta for $ID"
         #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
@@ -109,6 +109,18 @@ harvest() {
     else
         #No codemeta found, automatically extract from other sources.
         #(This allows for recombining from multiple sources)
+
+        #If there is a codemeta-harvest.json, we will add it to
+        #any other existing metadata that can be found
+        info "found codemeta-harvest.json for $ID"
+        #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
+        if dasel -n -f codemeta-harvest.json > /dev/null; then
+            cp codemeta-harvest.json "$CACHEDIR/tmp/00.$ID.codemeta-harvest.json"
+            #                               ^-- lowest number indicates highest priority
+        else
+            error "codemeta-harvest.json for $ID is not well-formed"
+            return 1
+        fi
 
         for f in CITATION.cff CITATION.CFF CITATION; do
             if [ -e "$f" ]; then
