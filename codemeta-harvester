@@ -58,6 +58,7 @@ done
 [ -n "$TMPDIR" ] || TMPDIR="/tmp"
 
 CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
+KEEPCACHE=0
 OUTPUTDIR=$(realpath .)
 CODEMETAPY_ARGS="--all" #enables all recommended extensions
 
@@ -74,6 +75,9 @@ while :; do
         -O|--outputdir)
             OUTPUTDIR="$(realpath $2)"
             shift
+            ;;
+        --keep)
+            KEEPCACHE=1
             ;;
         --debug)
             DEBUG=1
@@ -97,80 +101,87 @@ harvest() {
     ID="$1"
     REF="$2" #git ref
     CODEMETAPY_EXTRA_ARGS="$3"
-    #First we grab all possible metadata and store it in the tmp dir
-    if [ -e codemeta.json ]; then
-        #If there is an explicit codemeta.json, we will forego on all other detection methods
-        #and assume it it the sole authoritative source for metadata.
-        info "found codemeta for $ID"
-        #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
-        if dasel -n -f codemeta.json > /dev/null; then
-            cp codemeta.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
-            #                               ^-- lowest number indicates highest priority
-        else
-            error "codemeta.json for $ID is not well-formed"
-            return 1
-        fi
-    else
-        #No codemeta found, automatically extract from other sources.
-        #(This allows for recombining from multiple sources)
-
-        #If there is a codemeta-harvest.json, we will add it to
-        #any other existing metadata that can be found
-        if [ -e codemeta-harvest.json ]; then
-            info "found codemeta-harvest.json for $ID"
+    SCANDIRS="$4 ."
+    for scandir in $SCANDIRS; do
+        oldcwd="$(pwd)"
+        [ ! -d "$scandir" ] && continue
+        cd "$scandir"
+        #First we grab all possible metadata and store it in the tmp dir
+        if [ -e codemeta.json ]; then
+            #If there is an explicit codemeta.json, we will forego on all other detection methods
+            #and assume it it the sole authoritative source for metadata.
+            info "found codemeta for $ID"
             #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
-            if dasel -n -f codemeta-harvest.json > /dev/null; then
-                cp codemeta-harvest.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
+            if dasel -n -f codemeta.json > /dev/null; then
+                cp codemeta.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
                 #                               ^-- lowest number indicates highest priority
             else
-                error "codemeta-harvest.json for $ID is not well-formed"
+                error "codemeta.json for $ID is not well-formed"
                 return 1
             fi
-        fi
+        else
+            #No codemeta found, automatically extract from other sources.
+            #(This allows for recombining from multiple sources)
 
-        for f in CITATION.cff CITATION.CFF CITATION; do
-            if [ -e "$f" ]; then
-                info "found CITATION.cff for $ID, converting to codemeta"
-                if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
-                    error "CITATION.cff to codemeta conversion for $ID failed"
+            #If there is a codemeta-harvest.json, we will add it to
+            #any other existing metadata that can be found
+            if [ -e codemeta-harvest.json ]; then
+                info "found codemeta-harvest.json for $ID"
+                #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
+                if dasel -n -f codemeta-harvest.json > /dev/null; then
+                    cp codemeta-harvest.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
+                    #                               ^-- lowest number indicates highest priority
+                else
+                    error "codemeta-harvest.json for $ID is not well-formed"
+                    return 1
+                fi
+            fi
+
+            for f in CITATION.cff CITATION.CFF CITATION; do
+                if [ -e "$f" ]; then
+                    info "found CITATION.cff for $ID, converting to codemeta"
+                    if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
+                        error "CITATION.cff to codemeta conversion for $ID failed"
+                        return 1
+                    fi
+                    flushlog
+                    break
+                fi
+            done
+
+            if [ -e setup.py ] || [ -e pyproject.toml ]; then
+                info "found python setup for $ID, converting to codemeta"
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
+                    error "python setup.py to codemeta conversion failed (codemetapy failed)"
                     return 1
                 fi
                 flushlog
-                break
             fi
-        done
 
-        if [ -e setup.py ] || [ -e pyproject.toml ]; then
-            info "found python setup for $ID, converting to codemeta"
-            if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
-                error "python setup.py to codemeta conversion failed (codemetapy failed)"
-                return 1
+            SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
+            if [ -n "$SPDX" ]; then
+                echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
             fi
             flushlog
-        fi
 
-        SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
-        if [ -n "$SPDX" ]; then
-            echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
-        fi
-        flushlog
-
-        if [ -e README.rst ] && [ ! -e README.md ]; then
-            info "Converting README.rst to README.md"
-            pandoc README.rst --to gfm -o README.md
-        fi
-
-        for f in README.md README README.TXT;  do
-            if [ -e "$f" ]; then
-                if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
-                    error "README to codemeta conversion failed (proceeding regardless!)"
-                fi
-                flushlog
-                break
+            if [ -e README.rst ] && [ ! -e README.md ]; then
+                info "Converting README.rst to README.md"
+                pandoc README.rst --to gfm -o README.md
             fi
-        done
 
-    fi
+            for f in README.md README README.TXT;  do
+                if [ -e "$f" ]; then
+                    if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
+                        error "README to codemeta conversion failed (proceeding regardless!)"
+                    fi
+                    flushlog
+                    break
+                fi
+            done
+
+            cd "$oldcwd"
+        fi
+    done
 
     files=$(ls -r "$CACHEDIR"/tmp/??."$ID".codemeta.json)
 
@@ -190,7 +201,7 @@ harvest() {
         flushlog
         info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
-    rm -rf "$CACHEDIR/tmp/"??".$ID.codemeta.json"
+    [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/"??".$ID.codemeta.json"
 }
 
 get_latest_version() {
@@ -216,7 +227,8 @@ process() {
     CONFIGFILE="$1"
     ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
     SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
-    REPOPATH=$(dasel --null -r yaml ".path" < "$CONFIGFILE")
+    ROOTPATH=$(dasel --null -r yaml ".root" < "$CONFIGFILE")
+    SCANDIRS=$(dasel --null -r yaml --plain ".scandirs" < "$CONFIGFILE" | tr -d "[]")
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
     REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
@@ -233,10 +245,10 @@ process() {
             fi
             info "Using $REF"
             git -c advice.detachedHead=false checkout "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
-            if [ -n "$REPOPATH" ] && [ "$REPOPATH" != "null" ]; then
-                cd "$REPOPATH"
+            if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
+                cd "$ROOTPATH"
             fi
-            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS"
+            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS" "$SCANDIRS"
         else
             error "Failed to git pull $SOURCEREPO"
             return 1
@@ -251,10 +263,10 @@ process() {
             fi
             info "Using $REF for $ID"
             git -c advice.detachedHead=false checkout "$REF"  2> "$TMPLOG" >&2 | die "Invalid git ref '$REF' or unclean working dir"
-            if [ -n "$REPOPATH" ]  && [ "$REPOPATH" != "null" ]; then
-                cd "$REPOPATH"
+            if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
+                cd "$ROOTPATH"
             fi
-            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS"
+            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS" "$SCANDIRS"
         else
             error "Failed to git clone $SOURCEREPO"
             return 1
