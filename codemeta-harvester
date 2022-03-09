@@ -112,14 +112,16 @@ harvest() {
 
         #If there is a codemeta-harvest.json, we will add it to
         #any other existing metadata that can be found
-        info "found codemeta-harvest.json for $ID"
-        #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
-        if dasel -n -f codemeta-harvest.json > /dev/null; then
-            cp codemeta-harvest.json "$CACHEDIR/tmp/00.$ID.codemeta-harvest.json"
-            #                               ^-- lowest number indicates highest priority
-        else
-            error "codemeta-harvest.json for $ID is not well-formed"
-            return 1
+        if [ -e codemeta-harvest.json ]; then
+            info "found codemeta-harvest.json for $ID"
+            #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
+            if dasel -n -f codemeta-harvest.json > /dev/null; then
+                cp codemeta-harvest.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
+                #                               ^-- lowest number indicates highest priority
+            else
+                error "codemeta-harvest.json for $ID is not well-formed"
+                return 1
+            fi
         fi
 
         for f in CITATION.cff CITATION.CFF CITATION; do
