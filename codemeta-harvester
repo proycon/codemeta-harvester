@@ -221,12 +221,13 @@ process() {
     CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
-        if git fetch origin --tags; then
+        info "Git updating cached clone of $SOURCEREPO..."
+        if git fetch origin --tags 2> "$TMPLOG" >&2; then
             if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
             fi
             info "Using $REF"
-            git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
+            git -c advice.detachedHead=false checkout "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
             if [ -n "$REPOPATH" ] && [ "$REPOPATH" != "null" ]; then
                 cd "$REPOPATH"
             fi
@@ -237,13 +238,14 @@ process() {
         fi
     else
         cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
-        if git clone "$SOURCEREPO" "$CACHEDIR/$ID"; then
+        info "Git cloning $SOURCEREPO..."
+        if git clone "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
             cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
             if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
             fi
             info "Using $REF for $ID"
-            git -c advice.detachedHead=false checkout "$REF" || die "Invalid git ref '$REF' or unclean working dir"
+            git -c advice.detachedHead=false checkout "$REF"  2> "$TMPLOG" >&2 | die "Invalid git ref '$REF' or unclean working dir"
             if [ -n "$REPOPATH" ]  && [ "$REPOPATH" != "null" ]; then
                 cd "$REPOPATH"
             fi
