@@ -158,6 +158,25 @@ harvest() {
                 flushlog
             fi
 
+            if [ -e pom.xml ]; then
+                info "found pom.xml (Java/Maven) for $ID, converting to codemeta"
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/21.$ID.codemeta.json" pom.xml 2> "$TMPLOG" >&2; then
+                    error "pom.xml to codemeta conversion failed (codemetapy failed)"
+                    return 1
+                fi
+                flushlog
+            fi
+
+            if [ -e package.json ]; then
+                info "found package.json (NodeJS) for $ID, converting to codemeta"
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/22.$ID.codemeta.json" package.json 2> "$TMPLOG" >&2; then
+                    error "package.json to codemeta conversion failed (codemetapy failed)"
+                    return 1
+                fi
+                flushlog
+            fi
+
+
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
             if [ -n "$SPDX" ]; then
                 echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
