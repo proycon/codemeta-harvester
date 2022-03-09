@@ -262,7 +262,7 @@ process() {
                 REF=$(get_latest_version)
             fi
             info "Using $REF for $ID"
-            git -c advice.detachedHead=false checkout "$REF"  2> "$TMPLOG" >&2 | die "Invalid git ref '$REF' or unclean working dir"
+            git -c advice.detachedHead=false checkout "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
             if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH"
             fi
