@@ -155,7 +155,12 @@ harvest() {
         fi
         flushlog
 
-        for f in README.md README README.TXT README.rst;  do
+        if [ -e README.rst ] && [ ! -e README.md ]; then
+            info "Converting README.rst to README.md"
+            pandoc README.rst --to gfm -o README.md
+        fi
+
+        for f in README.md README README.TXT;  do
             if [ -e "$f" ]; then
                 if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
                     error "README to codemeta conversion failed (proceeding regardless!)"
