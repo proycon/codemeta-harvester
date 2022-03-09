@@ -6,13 +6,17 @@ SCRIPTDIR="$(dirname "$0")"
 DEBUG=0
 
 die() {
+    DEBUG=1
     flushlog
     echo "[harvester fatal error] $*">&2
     exit 2
 }
 
 error() {
+    OLDDEBUG=$DEBUG
+    DEBUG=1
     flushlog
+    DEBUG=$OLDDEBUG
     echo "[harvester error] $*">&2
 }
 
@@ -174,8 +178,8 @@ harvest() {
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
     info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files"
     if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
-        rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         error "Failed to consolidate metadata $ID"
+        rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
     else
         flushlog
