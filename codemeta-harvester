@@ -2,7 +2,7 @@
 
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 
-SCRIPTDIR="$(dirname "$0")"
+SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
 die() {
@@ -177,6 +177,7 @@ harvest() {
             fi
 
 
+            [ -e "$SCRIPTDIR/detect-license.sh" ] || fatal "Unable to find detect-license.sh in $SCRIPTDIR"
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
             if [ -n "$SPDX" ]; then
                 echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
@@ -211,7 +212,7 @@ harvest() {
 
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
-    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files"
+    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O \"$OUTPUTDIR/$ID.codemeta.json\" $files"
     if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
         error "Failed to consolidate metadata $ID"
         rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
@@ -222,6 +223,23 @@ harvest() {
     fi
     [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/"??".$ID.codemeta.json"
 }
+
+harvest_service() {
+    # Harvest metadata from a remote service endpoint and add it to the codemeta representation via
+    # the "targetProduct" property and one of the software types (https://github.com/codemeta/codemeta/issues/271)
+    ID="$1"
+    URL="$2"
+    CODEMETAPY_EXTRA_ARGS="$3"
+    info "Harvesting remote service URL $URL for $ID: codemetapy $CODEMETAPY_ARGS -O \"$CACHEDIR/tmp/$ID.codemeta.json\" \"$OUTPUTDIR/$ID.codemeta.json\" \"$URL\""
+    if codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/$ID.codemeta.json" "$OUTPUTDIR/$ID.codemeta.json" "$URL" 2> "$TMPLOG" >&2; then
+        flushlog
+        mv -f "$CACHEDIR/tmp/$ID.codemeta.json" "$OUTPUTDIR/$ID.codemeta.json"
+    else
+        error "Failed to obtain or process metadata from remote service URL $URL for $ID"
+        return 1
+    fi
+}
+
 
 get_latest_version() {
     #Finds the latest git tag or falls back to returning the git default branch (usually master or main)
@@ -248,12 +266,13 @@ process() {
     SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
     ROOTPATH=$(dasel --null -r yaml ".root" < "$CONFIGFILE")
     SCANDIRS=$(dasel --null -r yaml --plain ".scandirs" < "$CONFIGFILE" | tr -d "[]")
+    SERVICE_URLS=$(dasel --null -r yaml --plain ".services" < "$CONFIGFILE" | tr -d "[]")
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
     REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
         die "invalid configuration: $ID"
     fi
-    info "Processing $ID ($SOURCEREPO)"
+    info "--> Processing $ID ($SOURCEREPO)"
     CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
@@ -291,6 +310,15 @@ process() {
             return 1
         fi
     fi
+
+    #Process services
+    if [ -n "$SERVICE_URLS" ] && [ "$SERVICE_URLS" != "null" ]; then
+        for URL in $SERVICE_URLS; do
+            harvest_service "$ID" "$URL" "$CODEMETAPY_EXTRA_ARGS"
+        done
+    fi
+
+    info "<-- Finished processing $ID ($SOURCEREPO)"
 }
 
 if [ $# -eq 0 ]; then
