@@ -76,6 +76,10 @@ while :; do
             OUTPUTDIR="$(realpath $2)"
             shift
             ;;
+        -b|--baseuri)
+            CODEMETAPY_ARGS="$CODEMETAPY_ARGS --baseuri $2"
+            shift
+            ;;
         --keep)
             KEEPCACHE=1
             ;;
