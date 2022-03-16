@@ -184,6 +184,18 @@ harvest() {
             fi
             flushlog
 
+
+            GIT_REMOTE_URL=$(git remote get-url origin)
+            case "$GIT_REMOTE_URL" in
+                https://github.com/*|git@github.com*)
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+
+                        error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
+                    fi
+                    ;;
+            esac
+
+
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
                 pandoc README.rst --to gfm -o README.md
@@ -191,7 +203,7 @@ harvest() {
 
             for f in README.md README README.TXT;  do
                 if [ -e "$f" ]; then
-                    if ! somef describe -c "$CACHEDIR/tmp/30.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
+                    if ! somef describe -c "$CACHEDIR/tmp/40.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
                         error "README to codemeta conversion failed (proceeding regardless!)"
                     fi
                     flushlog
