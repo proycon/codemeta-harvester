@@ -215,6 +215,7 @@ harvest() {
                 fi
             done
 
+            #somef is optional because it relies on many dependencies that not everybody may want:
             if command -v somef 2> /dev/null >&2; then
                 for f in README.md README README.TXT;  do
                     if [ -e "$f" ]; then
