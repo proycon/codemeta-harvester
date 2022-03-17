@@ -1,2 +1,2 @@
 check:
-	shellcheck codemeta-harvester
+	shellcheck codemeta-harvester *.sh
