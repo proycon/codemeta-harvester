@@ -73,7 +73,7 @@ while :; do
             shift
             ;;
         -O|--outputdir)
-            OUTPUTDIR="$(realpath $2)"
+            OUTPUTDIR="$(realpath "$2")"
             shift
             ;;
         -b|--baseuri)
@@ -109,7 +109,7 @@ harvest() {
     for scandir in $SCANDIRS; do
         oldcwd="$(pwd)"
         [ ! -d "$scandir" ] && continue
-        cd "$scandir"
+        cd "$scandir" || die "Unable to enter $scandir"
         #First we grab all possible metadata and store it in the tmp dir
         if [ -e codemeta.json ]; then
             #If there is an explicit codemeta.json, we will forego on all other detection methods
@@ -155,6 +155,7 @@ harvest() {
 
             if [ -e setup.py ] || [ -e pyproject.toml ]; then
                 info "found python setup for $ID, converting to codemeta"
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
                     error "python setup.py to codemeta conversion failed (codemetapy failed)"
                     return 1
@@ -164,6 +165,7 @@ harvest() {
 
             if [ -e pom.xml ]; then
                 info "found pom.xml (Java/Maven) for $ID, converting to codemeta"
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/21.$ID.codemeta.json" pom.xml 2> "$TMPLOG" >&2; then
                     error "pom.xml to codemeta conversion failed (codemetapy failed)"
                     return 1
@@ -173,6 +175,7 @@ harvest() {
 
             if [ -e package.json ]; then
                 info "found package.json (NodeJS) for $ID, converting to codemeta"
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/22.$ID.codemeta.json" package.json 2> "$TMPLOG" >&2; then
                     error "package.json to codemeta conversion failed (codemetapy failed)"
                     return 1
@@ -192,6 +195,7 @@ harvest() {
             GIT_REMOTE_URL=$(git remote get-url origin)
             case "$GIT_REMOTE_URL" in
                 https://github.com/*|git@github.com*)
+                    #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
                         error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
@@ -228,7 +232,7 @@ harvest() {
                 done
             fi
 
-            cd "$oldcwd"
+            cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
     done
 
@@ -242,6 +246,7 @@ harvest() {
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
     info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS -O \"$OUTPUTDIR/$ID.codemeta.json\" $files"
+    #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_*ARGS)
     if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
         error "Failed to consolidate metadata $ID"
         rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
@@ -259,6 +264,7 @@ harvest_service() {
     ID="$1"
     URL="$2"
     info "Harvesting remote service URL $URL for $ID: codemetapy $CODEMETAPY_ARGS -O \"$CACHEDIR/tmp/$ID.codemeta.json\" \"$OUTPUTDIR/$ID.codemeta.json\" \"$URL\""
+    #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
     if codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/$ID.codemeta.json" "$OUTPUTDIR/$ID.codemeta.json" "$URL" 2> "$TMPLOG" >&2; then
         flushlog
         mv -f "$CACHEDIR/tmp/$ID.codemeta.json" "$OUTPUTDIR/$ID.codemeta.json"
@@ -288,7 +294,7 @@ git_default_branch() {
 
 process() {
     #read a configuration file and harvest the source
-    cd "$WORKDIR"
+    cd "$WORKDIR" || die "Unable to enter $WORKDIR"
     CONFIGFILE="$1"
     ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
     SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
@@ -312,7 +318,7 @@ process() {
             info "Using $REF"
             git -c advice.detachedHead=false checkout "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
             if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
-                cd "$ROOTPATH"
+                cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
             harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
         else
@@ -330,7 +336,7 @@ process() {
             info "Using $REF for $ID"
             git -c advice.detachedHead=false checkout "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
             if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
-                cd "$ROOTPATH"
+                cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
             harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
         else

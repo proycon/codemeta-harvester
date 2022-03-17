@@ -68,6 +68,7 @@ for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
             VERSION=""
             ;;
     esac
+    #shellch
 
     case "$TEXT" in
         *"OR ANY LATER VERSION"*)
@@ -82,7 +83,7 @@ for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
     if [ -n "$LICENSE" ]; then
         if [ "$LICENSE" = "MIT" ]; then
             #no version
-            echo $LICENSE
+            echo "$LICENSE"
             exit 0
         elif [ "$LICENSE" != "MIT" ] && [ -n "$VERSION" ]; then
             #version mandatory
