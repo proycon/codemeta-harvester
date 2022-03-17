@@ -205,7 +205,7 @@ harvest() {
             fi
 
             for f in README.md README README.TXT; do
-                if [ -e "$f"]; then
+                if [ -e "$f" ]; then
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < README.md 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/31.$ID.codemeta.json"
