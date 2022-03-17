@@ -199,13 +199,23 @@ harvest() {
                     ;;
             esac
 
+            if [ -e README.rst ] && [ ! -e README.md ]; then
+                info "Converting README.rst to README.md"
+                pandoc README.rst --to gfm -o README.md
+            fi
+
+            for f in README.md README README.TXT; do
+                if [ -e "$f"]; then
+                    REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < README.md 2> "$TMPLOG" | head -n 1)
+                    if [ -n "$REPOSTATUS" ]; then
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/31.$ID.codemeta.json"
+                    fi
+                    flushlog
+                    break
+                fi
+            done
 
             if command -v somef 2> /dev/null >&2; then
-                if [ -e README.rst ] && [ ! -e README.md ]; then
-                    info "Converting README.rst to README.md"
-                    pandoc README.rst --to gfm -o README.md
-                fi
-
                 for f in README.md README README.TXT;  do
                     if [ -e "$f" ]; then
                         if ! somef describe -c "$CACHEDIR/tmp/40.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
