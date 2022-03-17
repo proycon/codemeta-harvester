@@ -359,7 +359,7 @@ if [ $# -eq 0 ]; then
     #no configuration provided, just harvest only current project
     ID="$(basename "$(pwd)")"
     info "Attempting to guess source repo"
-    SOURCEREPO=$(git remote get-url origin)
+    SOURCEREPO=$(git remote get-url origin | sed "s|git@github.com:|https://github.com/|")
     if [ -n "$SOURCEREPO" ]; then
         info "Source repo is $SOURCEREPO"
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
