@@ -184,7 +184,7 @@ harvest() {
             fi
 
 
-            [ -e "$SCRIPTDIR/detect-license.sh" ] || fatal "Unable to find detect-license.sh in $SCRIPTDIR"
+            [ -e "$SCRIPTDIR/detect-license.sh" ] || die "Unable to find detect-license.sh in $SCRIPTDIR"
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
             if [ -n "$SPDX" ]; then
                 echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"

@@ -24,7 +24,7 @@ This harvester can be used for two purposes:
 
 A docker container can be build as follows:
 
-``docker build -t proycon/codemeta-harvester .``
+``make docker``
 
 A pre-built container image can also be pulled from Docker Hub once the software is released:
 
@@ -40,8 +40,24 @@ software as follows:
     * curl
     * [dasel](https://github.com/TomWright/dasel)
     * coreutils or busybox
+    * GNU Make
 
-## Usage
+## Usage: producing codemeta for your project
+
+In your project directory, which ideally should be a git clone, you can just run codemeta-harvester to create a `codemeta.json`
+file based on the files in your repository:
+
+`codemeta-harvester`
+
+You probably use the docker container, then the syntax is as follows:
+
+`docker run -v .:/data proycon/codemeta-harvester`
+
+The `-v` argument mounts your current working directory in the container.
+
+
+
+
 
 
 

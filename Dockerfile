@@ -7,4 +7,8 @@ RUN apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ pand
 #TODO: replace with stable version after codemetapy release --------------v
 RUN python3 -m pip install  --no-cache-dir --prefix /usr git+https://github.com/proycon/codemetapy.git cffconvert
 COPY codemeta-harvester /usr/bin/
+COPY *.sh /usr/bin/
+
+WORKDIR /data
+
 ENTRYPOINT ["codemeta-harvester"]
