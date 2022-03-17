@@ -200,20 +200,22 @@ harvest() {
             esac
 
 
-            if [ -e README.rst ] && [ ! -e README.md ]; then
-                info "Converting README.rst to README.md"
-                pandoc README.rst --to gfm -o README.md
-            fi
-
-            for f in README.md README README.TXT;  do
-                if [ -e "$f" ]; then
-                    if ! somef describe -c "$CACHEDIR/tmp/40.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
-                        error "README to codemeta conversion failed (proceeding regardless!)"
-                    fi
-                    flushlog
-                    break
+            if command -v somef 2> /dev/null >&2; then
+                if [ -e README.rst ] && [ ! -e README.md ]; then
+                    info "Converting README.rst to README.md"
+                    pandoc README.rst --to gfm -o README.md
                 fi
-            done
+
+                for f in README.md README README.TXT;  do
+                    if [ -e "$f" ]; then
+                        if ! somef describe -c "$CACHEDIR/tmp/40.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
+                            error "README to codemeta conversion failed (proceeding regardless!)"
+                        fi
+                        flushlog
+                        break
+                    fi
+                done
+            fi
 
             cd "$oldcwd"
         fi
