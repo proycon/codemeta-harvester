@@ -104,7 +104,7 @@ harvest() {
     # Harvest metadata from the current directory and convert it to codemeta
     ID="$1"
     REF="$2" #git ref
-    CODEMETAPY_EXTRA_ARGS="$3"
+    CODEMETAPY_RECONCILE_ARGS="$3"
     SCANDIRS="$4 ."
     for scandir in $SCANDIRS; do
         oldcwd="$(pwd)"
@@ -241,8 +241,8 @@ harvest() {
 
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
-    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O \"$OUTPUTDIR/$ID.codemeta.json\" $files"
-    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_EXTRA_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
+    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS -O \"$OUTPUTDIR/$ID.codemeta.json\" $files"
+    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
         error "Failed to consolidate metadata $ID"
         rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
@@ -258,7 +258,6 @@ harvest_service() {
     # the "targetProduct" property and one of the software types (https://github.com/codemeta/codemeta/issues/271)
     ID="$1"
     URL="$2"
-    CODEMETAPY_EXTRA_ARGS="$3"
     info "Harvesting remote service URL $URL for $ID: codemetapy $CODEMETAPY_ARGS -O \"$CACHEDIR/tmp/$ID.codemeta.json\" \"$OUTPUTDIR/$ID.codemeta.json\" \"$URL\""
     if codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/$ID.codemeta.json" "$OUTPUTDIR/$ID.codemeta.json" "$URL" 2> "$TMPLOG" >&2; then
         flushlog
@@ -302,7 +301,7 @@ process() {
         die "invalid configuration: $ID"
     fi
     info "--> Processing $ID ($SOURCEREPO)"
-    CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
+    CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
         info "Git updating cached clone of $SOURCEREPO..."
@@ -315,7 +314,7 @@ process() {
             if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH"
             fi
-            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS" "$SCANDIRS"
+            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
         else
             error "Failed to git pull $SOURCEREPO"
             return 1
@@ -333,7 +332,7 @@ process() {
             if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH"
             fi
-            harvest "$ID" "$REF" "$CODEMETAPY_EXTRA_ARGS" "$SCANDIRS"
+            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
         else
             error "Failed to git clone $SOURCEREPO"
             return 1
@@ -343,7 +342,7 @@ process() {
     #Process services
     if [ -n "$SERVICE_URLS" ] && [ "$SERVICE_URLS" != "null" ]; then
         for URL in $SERVICE_URLS; do
-            harvest_service "$ID" "$URL" "$CODEMETAPY_EXTRA_ARGS"
+            harvest_service "$ID" "$URL"
         done
     fi
 
@@ -357,11 +356,11 @@ if [ $# -eq 0 ]; then
     SOURCEREPO=$(git remote get-url origin)
     if [ -n "$SOURCEREPO" ]; then
         info "Source repo is $SOURCEREPO"
-        CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
+        CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
     else
-        CODEMETAPY_EXTRA_ARGS="--identifier \"$ID\""
+        CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\""
     fi
-    if harvest "$ID" "" "$CODEMETAPY_EXTRA_ARGS"; then
+    if harvest "$ID" "" "$CODEMETAPY_RECONCILE_ARGS"; then
         if [ ! -e "codemeta.json" ]; then
             mv "$ID.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
         fi
