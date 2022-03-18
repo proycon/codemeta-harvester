@@ -202,11 +202,32 @@ harvest() {
             fi
             flushlog
 
-            #Get all authors from git (in order of nr of commits)
-            git shortlog -s -e | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
-            if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
-                    error "Parsing contributors failed (codemetapy failed)"
+
+            if [ -f MAINTAINERS ]; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
+                    error "Parsing MAINTAINERS file failed (codemetapy failed)"
+                fi
+                flushlog
+            fi
+
+            if [ -f AUTHORS ]; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31.$ID.codemeta.json" -i authors "AUTHORS" 2> "$TMPLOG" >&2; then
+                    error "Parsing AUTHORS file failed (codemetapy failed)"
+                fi
+                flushlog
+            fi
+
+            if [ -f CONTRIBUTORS ]; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32.$ID.codemeta.json" -i contributors "CONTRIBUTORS" 2> "$TMPLOG" >&2; then
+                    error "Parsing CONTRIBUTORS file failed (codemetapy failed)"
+                fi
+            else
+                #Get all authors from git (in order of nr of commits)
+                git shortlog -s -e | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
+                if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
+                        error "Parsing contributors failed (codemetapy failed)"
+                    fi
                 fi
             fi
             flushlog
@@ -215,7 +236,7 @@ harvest() {
             case "$GIT_REMOTE_URL" in
                 https://github.com/*|git@github.com*)
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
                         error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
@@ -231,7 +252,7 @@ harvest() {
                 if [ -e "$f" ]; then
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < README.md 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/31.$ID.codemeta.json"
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/50.$ID.codemeta.json"
                     fi
                     flushlog
                     break
