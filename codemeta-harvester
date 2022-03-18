@@ -243,6 +243,12 @@ harvest() {
                     ;;
             esac
 
+            DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
+            DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
+            if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
+                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/41.$ID.codemeta.json"
+            fi
+
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
                 pandoc README.rst --to gfm -o README.md
