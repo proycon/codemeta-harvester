@@ -40,7 +40,7 @@ flushlog() {
 }
 
 usage() {
-    echo "codemeta-harvester [--cachedir path] [--outputdir path] [CONFIG_FILE_OR_DIRECTORY] ...">&2
+    echo "codemeta-harvester [--debug] [--cachedir path] [--baseuri uri] [--outputdir path] [--opts codemetapy-options] [CONFIG_FILE_OR_DIRECTORY] ...">&2
     echo "   This tool harvests software metadata from source code repositories and makes it available as codemeta."
     echo "   If not file or directory is specified, the harvester will attempt to extract" >&2
     echo "   software metadata for the project in the current working directory and write a codemeta.json file there." >&2
