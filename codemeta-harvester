@@ -60,7 +60,7 @@ done
 CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
 KEEPCACHE=0
 OUTPUTDIR=$(realpath .)
-CODEMETAPY_ARGS="--all" #enables all recommended extensions
+CODEMETAPY_ARGS=""
 
 while :; do
     case $1 in
@@ -85,6 +85,10 @@ while :; do
             ;;
         --debug)
             DEBUG=1
+            ;;
+        --opts)
+            CODEMETAPY_ARGS="$CODEMETAPY_ARGS $2"
+            shift
             ;;
         -?*)
             die "Unknown option: -$1"
