@@ -202,12 +202,20 @@ harvest() {
             fi
             flushlog
 
+            #Get all authors from git (in order of nr of commits)
+            git shortlog -s -e | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
+            if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
+                    error "Parsing contributors failed (codemetapy failed)"
+                fi
+            fi
+            flushlog
 
             GIT_REMOTE_URL=$(git remote get-url origin)
             case "$GIT_REMOTE_URL" in
                 https://github.com/*|git@github.com*)
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
                         error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
