@@ -55,6 +55,9 @@ You probably use the docker container, then the syntax is as follows:
 
 The `-v` argument mounts your current working directory in the container.
 
+If you want to regenerate an existing ``codemeta.json``, rather than use it as input which would be the default
+behaviour, then add the ``--ignore`` parameter.
+
 ## Usage: harvesting metadata for various projects
 
 To harvest and collect metadata from various projects, you need to create configuration files that tells the harvester
