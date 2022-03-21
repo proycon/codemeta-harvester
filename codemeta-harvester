@@ -63,6 +63,7 @@ done
 CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
 KEEPCACHE=0
 IGNORE=0
+CLEAN_README=0
 OUTPUTDIR=$(realpath .)
 CODEMETAPY_ARGS=""
 
@@ -121,6 +122,9 @@ harvest() {
         oldcwd="$(pwd)"
         [ ! -d "$scandir" ] && continue
         cd "$scandir" || die "Unable to enter $scandir"
+
+        CLEAN_README=0
+
         #First we grab all possible metadata and store it in the tmp dir
         if [ -e codemeta.json ] && [ $IGNORE -eq 0 ]; then
             #If there is an explicit codemeta.json, we will forego on all other detection methods
@@ -232,7 +236,7 @@ harvest() {
             fi
             flushlog
 
-            GIT_REMOTE_URL=$(git remote get-url origin)
+            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@github.com:|https://github.com/|' | sed "s|\.git$||")
             case "$GIT_REMOTE_URL" in
                 https://github.com/*|git@github.com*)
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -240,18 +244,27 @@ harvest() {
 
                         error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
+
+                    for f in README.rst README.rst README README.TXT; do
+                        if [ -e "$f" ]; then
+                            echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41.$ID.codemeta.json"
+                            break
+                        fi
+                    done
                     ;;
             esac
 
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
             DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
             if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
-                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/41.$ID.codemeta.json"
+                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/42.$ID.codemeta.json"
             fi
+
 
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
                 pandoc README.rst --to gfm -o README.md
+                CLEAN_README=1
             fi
 
             for f in README.md README README.TXT; do
@@ -277,6 +290,9 @@ harvest() {
                     fi
                 done
             fi
+
+            #remove the readme again if it comes from our conversion
+            [ $CLEAN_README -eq 1 ] && rm README.md
 
             cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
@@ -362,7 +378,7 @@ process() {
                 REF=$(get_latest_version)
             fi
             info "Using $REF"
-            git -c advice.detachedHead=false checkout "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+            git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
             if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
@@ -380,7 +396,7 @@ process() {
                 REF=$(get_latest_version)
             fi
             info "Using $REF for $ID"
-            git -c advice.detachedHead=false checkout "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+            git -c advice.detachedHead=false checkout -f "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
             if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
