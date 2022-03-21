@@ -211,8 +211,8 @@ harvest() {
             fi
             flushlog
 
-
             if [ -f MAINTAINERS ]; then
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
                     error "Parsing MAINTAINERS file failed (codemetapy failed)"
                 fi
@@ -220,6 +220,7 @@ harvest() {
             fi
 
             if [ -f AUTHORS ]; then
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31.$ID.codemeta.json" -i authors "AUTHORS" 2> "$TMPLOG" >&2; then
                     error "Parsing AUTHORS file failed (codemetapy failed)"
                 fi
@@ -227,6 +228,7 @@ harvest() {
             fi
 
             if [ -f CONTRIBUTORS ]; then
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32.$ID.codemeta.json" -i contributors "CONTRIBUTORS" 2> "$TMPLOG" >&2; then
                     error "Parsing CONTRIBUTORS file failed (codemetapy failed)"
                 fi
@@ -234,6 +236,7 @@ harvest() {
                 #Get all authors from git (in order of nr of commits)
                 git shortlog -s -e | grep -v "noreply.github.com" | grep -v "snyk-bot" | grep -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
+                    #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
                         error "Parsing contributors failed (codemetapy failed)"
                     fi
@@ -301,7 +304,7 @@ harvest() {
                     if [ -n "$URLS" ]; then
                         for URL in $URLS; do
                             TITLE=$(scrape_html_title "$URL")
-                            [ -n "$TITLE " ] && TITLE="\"name\": \"$TITLE\","
+                            [ -n "$TITLE" ] && TITLE="\"name\": \"$TITLE\","
                             echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebPage\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR.$ID.codemeta.json"
                             SEQNR=$((SEQNR+1))
                         done
