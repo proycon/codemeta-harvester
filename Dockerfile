@@ -1,4 +1,8 @@
 FROM alpine:latest
+
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
+
 RUN apk add python3 py3-pip py3-yaml py3-ruamel.yaml py3-requests py3-matplotlib py3-markdown py3-rdflib py3-lxml git dasel curl recode
 
 #pandoc is not in stable yet, grab from edge/testing:
