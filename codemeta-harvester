@@ -55,7 +55,7 @@ usage() {
 }
 
 missing=0
-DEPENDENCIES="git sed python3 dasel codemetapy cffconvert"
+DEPENDENCIES="git sed python3 dasel codemetapy cffconvert recode awk"
 for dependency in $DEPENDENCIES; do
     if ! command -v "$dependency" >/dev/null 2>/dev/null; then
         error "dependency $dependency not found" && missing=1
@@ -300,7 +300,9 @@ harvest() {
                     URLS=$("$SCRIPTDIR/detect-documentation.sh" < "$f" 2> "$TMPLOG")
                     if [ -n "$URLS" ]; then
                         for URL in $URLS; do
-                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", \"@type\": \"WebPage\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR.$ID.codemeta.json"
+                            TITLE=$(scrape_html_title "$URL")
+                            [ -n "$TITLE " ] && TITLE="\"name\": \"$TITLE\","
+                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebPage\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR.$ID.codemeta.json"
                             SEQNR=$((SEQNR+1))
                         done
                     fi
@@ -383,6 +385,12 @@ get_latest_version() {
 git_default_branch() {
     #output the git default branch for the repository in the current working dir (usually master or main)
     git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
+}
+
+scrape_html_title() {
+    #Scrape the title from a webpage
+    info "Scraping title from $1"
+    curl -s -L "$1" | awk 'BEGIN{IGNORECASE=1;FS="<title>|</title>";RS=EOF} {print $2}' | sed '/^$/d' | recode html..utf8 | sed "s/\"/'"
 }
 
 process() {

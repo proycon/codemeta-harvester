@@ -39,6 +39,7 @@ software as follows:
     * git
     * curl
     * [dasel](https://github.com/TomWright/dasel)
+    * [recode](https://github.com/rrthomas/recode/)
     * coreutils or busybox
     * GNU Make
 
