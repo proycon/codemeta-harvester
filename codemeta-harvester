@@ -250,19 +250,33 @@ harvest() {
                         error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
 
+                    #Add README URL
                     for f in README.rst README.rst README README.TXT; do
                         if [ -e "$f" ]; then
                             echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41.$ID.codemeta.json"
                             break
                         fi
                     done
+
+                    #Add build instructions URL
+                    for f in INSTALL.md INSTALL BUILD.md BUILD; do
+                        if [ -e "$f" ]; then
+                            echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42.$ID.codemeta.json"
+                            break
+                        fi
+                    done
+
+                    #Add release notes URL and download URL
+                    if [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                        echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43.$ID.codemeta.json"
+                    fi
                     ;;
             esac
 
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
             DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
             if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
-                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/42.$ID.codemeta.json"
+                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/44.$ID.codemeta.json"
             fi
 
 
