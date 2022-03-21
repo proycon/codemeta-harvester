@@ -288,9 +288,21 @@ harvest() {
 
             for f in README.md README README.TXT; do
                 if [ -e "$f" ]; then
-                    REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < README.md 2> "$TMPLOG" | head -n 1)
+                    #Detect developmentStatus via repostatus badges
+                    REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/50.$ID.codemeta.json"
+                    fi
+                    flushlog
+
+                    #Detect links to documentation
+                    SEQNR=50
+                    URLS=$("$SCRIPTDIR/detect-documentation.sh" < "$f" 2> "$TMPLOG")
+                    if [ -n "$URLS" ]; then
+                        for URL in $URLS; do
+                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", \"@type\": \"WebPage\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR.$ID.codemeta.json"
+                            SEQNR=$((SEQNR+1))
+                        done
                     fi
                     flushlog
                     break
