@@ -46,7 +46,10 @@ usage() {
     echo "   software metadata for the project in the current working directory and write a codemeta.json file there." >&2
     echo "">&2
     echo "Options:">&2
-    echo "  --ignore      Ignores reading the existing codemeta.json and overwrites it again">&2
+    echo "  --ignore          Ignores reading the existing codemeta.json and overwrites it again">&2
+    echo "  --baseuri [URI]   Sets the base URI to use for all RDF resources">&2
+    echo "  --opts [ARGS]     Extra options to pass to codemetapy">&2
+    echo "  --cachedir [PATH]  Directory to use for caching and storage of temporary files, all git repos will be cloned here">&2
 }
 
 missing=0
