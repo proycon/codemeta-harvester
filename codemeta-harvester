@@ -327,6 +327,11 @@ harvest() {
                 done
             fi
 
+            if [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                #in case no version number can be found anywhere, we fall back to the git tag
+                echo "{ \"version\": \"$REF\" }" > "$CACHEDIR/tmp/99.$ID.codemeta.json"
+            fi
+
             #remove the readme again if it comes from our conversion
             [ $CLEAN_README -eq 1 ] && rm README.md
 
