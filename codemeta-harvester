@@ -305,7 +305,7 @@ harvest() {
                         for URL in $URLS; do
                             TITLE=$(scrape_html_title "$URL")
                             [ -n "$TITLE" ] && TITLE="\"name\": \"$TITLE\","
-                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebPage\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR.$ID.codemeta.json"
+                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR.$ID.codemeta.json"
                             SEQNR=$((SEQNR+1))
                         done
                     fi
