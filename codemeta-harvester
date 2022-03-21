@@ -223,7 +223,7 @@ harvest() {
                 fi
             else
                 #Get all authors from git (in order of nr of commits)
-                git shortlog -s -e | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
+                git shortlog -s -e | grep -v "noreply.github.com" -v "snyk-bot" -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
                         error "Parsing contributors failed (codemetapy failed)"
