@@ -398,7 +398,7 @@ git_default_branch() {
 scrape_html_title() {
     #Scrape the title from a webpage
     info "Scraping title from $1"
-    curl -s -L "$1" | awk 'BEGIN{IGNORECASE=1;FS="<title>|</title>";RS=EOF} {print $2}' | sed '/^$/d' | recode html..utf8 | sed "s/\"/'/g"
+    curl -s -L "$1" | gawk 'BEGIN{IGNORECASE=1;FS="<title>|</title>";RS=EOF} {print $2}' | sed '/^$/d' | recode html..utf8 | sed "s/\"/'/g"
 }
 
 process() {

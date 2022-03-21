@@ -42,6 +42,7 @@ software as follows:
     * [recode](https://github.com/rrthomas/recode/)
     * coreutils or busybox
     * GNU Make
+    * GNU awk
 
 ## Usage: producing codemeta for your project
 
