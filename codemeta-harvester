@@ -104,7 +104,7 @@ while :; do
             shift
             ;;
         -?*)
-            die "Unknown option: -$1"
+            die "Unknown option: $1"
             ;;
         *)
             break
