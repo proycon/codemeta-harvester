@@ -143,7 +143,7 @@ harvest() {
             info "found codemeta for $ID"
             #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
             if dasel -n -f codemeta.json > /dev/null; then
-                cp codemeta.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
+                cp codemeta.json "$CACHEDIR/tmp/00-jsonld.$ID.codemeta.json"
                 #                               ^-- lowest number indicates highest priority
             else
                 error "codemeta.json for $ID is not well-formed"
@@ -159,7 +159,7 @@ harvest() {
                 info "found codemeta-harvest.json for $ID"
                 #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
                 if dasel -n -f codemeta-harvest.json > /dev/null; then
-                    cp codemeta-harvest.json "$CACHEDIR/tmp/00.$ID.codemeta.json"
+                    cp codemeta-harvest.json "$CACHEDIR/tmp/00-harvest.$ID.codemeta.json"
                     #                               ^-- lowest number indicates highest priority
                 else
                     error "codemeta-harvest.json for $ID is not well-formed"
@@ -170,7 +170,7 @@ harvest() {
             for f in CITATION.cff CITATION.CFF CITATION; do
                 if [ -e "$f" ]; then
                     info "found CITATION.cff for $ID, converting to codemeta"
-                    if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
+                    if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10-citationcff.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
                         error "CITATION.cff to codemeta conversion for $ID failed"
                         return 1
                     fi
@@ -182,7 +182,7 @@ harvest() {
             if [ -e setup.py ] || [ -e pyproject.toml ]; then
                 info "found python setup for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20-python.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
                     error "python setup.py to codemeta conversion failed (codemetapy failed)"
                     return 1
                 fi
@@ -192,7 +192,7 @@ harvest() {
             if [ -e pom.xml ]; then
                 info "found pom.xml (Java/Maven) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/21.$ID.codemeta.json" pom.xml 2> "$TMPLOG" >&2; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/21-java.$ID.codemeta.json" pom.xml 2> "$TMPLOG" >&2; then
                     error "pom.xml to codemeta conversion failed (codemetapy failed)"
                     return 1
                 fi
@@ -202,7 +202,7 @@ harvest() {
             if [ -e package.json ]; then
                 info "found package.json (NodeJS) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/22.$ID.codemeta.json" package.json 2> "$TMPLOG" >&2; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/22-npm.$ID.codemeta.json" package.json 2> "$TMPLOG" >&2; then
                     error "package.json to codemeta conversion failed (codemetapy failed)"
                     return 1
                 fi
@@ -213,13 +213,13 @@ harvest() {
             [ -e "$SCRIPTDIR/detect-license.sh" ] || die "Unable to find detect-license.sh in $SCRIPTDIR"
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
             if [ -n "$SPDX" ]; then
-                echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29.$ID.codemeta.json"
+                echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29-license.$ID.codemeta.json"
             fi
             flushlog
 
             if [ -f MAINTAINERS ]; then
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
                     error "Parsing MAINTAINERS file failed (codemetapy failed)"
                 fi
                 flushlog
@@ -227,7 +227,7 @@ harvest() {
 
             if [ -f AUTHORS ]; then
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31.$ID.codemeta.json" -i authors "AUTHORS" 2> "$TMPLOG" >&2; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31-authors.$ID.codemeta.json" -i authors "AUTHORS" 2> "$TMPLOG" >&2; then
                     error "Parsing AUTHORS file failed (codemetapy failed)"
                 fi
                 flushlog
@@ -235,7 +235,7 @@ harvest() {
 
             if [ -f CONTRIBUTORS ]; then
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32.$ID.codemeta.json" -i contributors "CONTRIBUTORS" 2> "$TMPLOG" >&2; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32-contributors.$ID.codemeta.json" -i contributors "CONTRIBUTORS" 2> "$TMPLOG" >&2; then
                     error "Parsing CONTRIBUTORS file failed (codemetapy failed)"
                 fi
             else
@@ -243,7 +243,7 @@ harvest() {
                 git shortlog -s -e | grep -v "noreply.github.com" | grep -v "snyk-bot" | grep -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32-contributors.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
                         error "Parsing contributors failed (codemetapy failed)"
                     fi
                 fi
@@ -253,14 +253,14 @@ harvest() {
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
             DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
             if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
-                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39.$ID.codemeta.json"
+                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39-gitdate.$ID.codemeta.json"
             fi
 
             GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@github.com:|https://github.com/|' | sed "s|\.git$||")
             case "$GIT_REMOTE_URL" in
                 https://github.com/*|git@github.com*)
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-githubapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
                         error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
@@ -268,7 +268,7 @@ harvest() {
                     #Add README URL
                     for f in README.rst README.rst README README.TXT; do
                         if [ -e "$f" ]; then
-                            echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41.$ID.codemeta.json"
+                            echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
                             break
                         fi
                     done
@@ -276,14 +276,14 @@ harvest() {
                     #Add build instructions URL
                     for f in INSTALL.md INSTALL BUILD.md BUILD; do
                         if [ -e "$f" ]; then
-                            echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42.$ID.codemeta.json"
+                            echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
                             break
                         fi
                     done
 
                     #Add release notes URL and download URL
                     if [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
-                        echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43.$ID.codemeta.json"
+                        echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43-releasenotes.$ID.codemeta.json"
                     fi
                     ;;
             esac
@@ -301,7 +301,7 @@ harvest() {
                     #Detect developmentStatus via repostatus badges
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/50.$ID.codemeta.json"
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/50-repotatus.$ID.codemeta.json"
                     fi
                     flushlog
 
@@ -312,7 +312,7 @@ harvest() {
                         for URL in $URLS; do
                             TITLE=$(scrape_html_title "$URL")
                             [ -n "$TITLE" ] && TITLE="\"name\": \"$TITLE\","
-                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR.$ID.codemeta.json"
+                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR-documentation.$ID.codemeta.json"
                             SEQNR=$((SEQNR+1))
                         done
                     fi
@@ -325,7 +325,7 @@ harvest() {
             if command -v somef 2> /dev/null >&2; then
                 for f in README.md README README.TXT;  do
                     if [ -e "$f" ]; then
-                        if ! somef describe -c "$CACHEDIR/tmp/40.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
+                        if ! somef describe -c "$CACHEDIR/tmp/40-somef.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
                             error "README to codemeta conversion failed (proceeding regardless!)"
                         fi
                         flushlog
@@ -336,7 +336,7 @@ harvest() {
 
             if [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
                 #in case no version number can be found anywhere, we fall back to the git tag
-                echo "{ \"version\": \"$REF\" }" > "$CACHEDIR/tmp/99.$ID.codemeta.json"
+                echo "{ \"version\": \"$REF\" }" > "$CACHEDIR/tmp/99-version.$ID.codemeta.json"
             fi
 
             #remove the readme again if it comes from our conversion
@@ -346,12 +346,19 @@ harvest() {
         fi
     done
 
-    files=$(ls -r "$CACHEDIR"/tmp/??."$ID".codemeta.json)
+    files=$(ls -r "$CACHEDIR"/tmp/*."$ID".codemeta.json)
 
     if [ -z "$files" ]; then
         error "No metadata sources found for $ID"
         return 1
     fi
+
+    for f in $files; do
+        if dasel -f "$f" -p json > /dev/null; then
+            error "File $f is not valid JSON, removing..."
+            rm "$f"
+        fi
+    done
 
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
@@ -365,7 +372,7 @@ harvest() {
         flushlog
         info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
-    [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/"??".$ID.codemeta.json"
+    [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/*.$ID.codemeta.json"
 }
 
 harvest_service() {
