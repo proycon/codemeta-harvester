@@ -354,7 +354,7 @@ harvest() {
     fi
 
     for f in $files; do
-        if dasel -f "$f" -p json > /dev/null; then
+        if ! dasel -f "$f" -p json > /dev/null; then
             error "File $f is not valid JSON, removing..."
             rm "$f"
         fi
