@@ -46,12 +46,14 @@ usage() {
     echo "   software metadata for the project in the current working directory and write a codemeta.json file there." >&2
     echo "">&2
     echo "Options:">&2
-    echo "  --ignore          Ignores reading the existing codemeta.json and overwrites it again">&2
-    echo "  --baseuri [URI]   Sets the base URI to use for all RDF resources">&2
-    echo "  --opts [ARGS]     Extra options to pass to codemetapy">&2
-    echo "  --cachedir [PATH] Directory to use for caching and storage of temporary files, all git repos will be cloned here">&2
-    echo "  --debug           Output all logs"
-    echo "  --keep            Keep intermediate output (in cachedir), don't clean up (useful for debugging)"
+    echo "  --ignore            Ignores reading the existing codemeta.json and overwrites it again">&2
+    echo "  --baseuri [URI]     Sets the base URI to use for all RDF resources">&2
+    echo "  --opts [ARGS]       Extra options to pass to codemetapy">&2
+    echo "  --identifier [ARGS] Force this identifier (only works when not providing explicit input files)">&2
+    echo "  --cachedir [PATH]   Directory to use for caching and storage of temporary files, all git repos will be cloned here">&2
+    echo "  --debug             Output all logs"
+    echo "  --keep              Keep intermediate output (in cachedir), don't clean up (useful for debugging)"
+    echo "  --stdout            Don't write files but output to stdout"
 }
 
 missing=0
@@ -98,6 +100,10 @@ while :; do
             ;;
         --debug)
             DEBUG=1
+            ;;
+        --identifier)
+            IDENTIFIER="$2"
+            shift
             ;;
         --opts)
             CODEMETAPY_ARGS="$CODEMETAPY_ARGS $2"
@@ -244,6 +250,12 @@ harvest() {
             fi
             flushlog
 
+            DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
+            DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
+            if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
+                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39.$ID.codemeta.json"
+            fi
+
             GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@github.com:|https://github.com/|' | sed "s|\.git$||")
             case "$GIT_REMOTE_URL" in
                 https://github.com/*|git@github.com*)
@@ -276,11 +288,6 @@ harvest() {
                     ;;
             esac
 
-            DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
-            DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
-            if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
-                echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/44.$ID.codemeta.json"
-            fi
 
 
             if [ -e README.rst ] && [ ! -e README.md ]; then
@@ -352,7 +359,7 @@ harvest() {
     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_*ARGS)
     if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
         error "Failed to consolidate metadata $ID"
-        rm "$OUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
+        rm "$OUTPUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
     else
         flushlog
@@ -466,18 +473,20 @@ process() {
 
 if [ $# -eq 0 ]; then
     #no configuration provided, just harvest only current project
-    ID="$(basename "$(pwd)")"
+    if [ -z "$IDENTIFIER" ]; then
+        IDENTIFIER="$(basename "$(pwd)")"
+    fi
     info "Attempting to guess source repo"
     SOURCEREPO=$(git remote get-url origin | sed "s|git@github.com:|https://github.com/|")
     if [ -n "$SOURCEREPO" ]; then
         info "Source repo is $SOURCEREPO"
-        CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
+        CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\" --codeRepository \"$SOURCEREPO\""
     else
-        CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\""
+        CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\""
     fi
-    if harvest "$ID" "" "$CODEMETAPY_RECONCILE_ARGS"; then
+    if harvest "$IDENTIFIER" "" "$CODEMETAPY_RECONCILE_ARGS"; then
         if [ ! -e "codemeta.json" ] || [ $IGNORE -eq 1 ]; then
-            mv "$ID.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
+            mv "$OUTPUTDIR/$IDENTIFIER.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
         fi
     fi
 else
