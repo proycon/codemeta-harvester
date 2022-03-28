@@ -440,6 +440,11 @@ process() {
             fi
             info "Using $REF"
             git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+            #pull may still be needed to fast-forward local branch
+            if ! git pull origin $REF; then
+                error "Failed to pull $SOURCEREPO"
+                exit 1
+            fi
             if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
