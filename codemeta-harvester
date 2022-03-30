@@ -357,12 +357,16 @@ harvest() {
         return 1
     fi
 
+    RESCAN=0
     for f in $files; do
         if ! dasel -f "$f" -p json > /dev/null; then
             error "File $f is not valid JSON, removing..."
             rm "$f"
+            RESCAN=1
         fi
     done
+
+    [ $RESCAN -eq 1 ] && files=$(ls -r "$CACHEDIR"/tmp/*."$ID".codemeta.json)
 
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
