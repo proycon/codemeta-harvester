@@ -70,7 +70,7 @@ done
 CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
 KEEPCACHE=0
 IGNORE=0
-Copen clipart grinderLEAN_README=0
+CLEAN_README=0
 OUTPUTDIR=$(realpath .)
 CODEMETAPY_ARGS=""
 
