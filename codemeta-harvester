@@ -70,7 +70,7 @@ done
 CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
 KEEPCACHE=0
 IGNORE=0
-CLEAN_README=0
+Copen clipart grinderLEAN_README=0
 OUTPUTDIR=$(realpath .)
 CODEMETAPY_ARGS=""
 
@@ -128,6 +128,10 @@ harvest() {
     ID="$1"
     REF="$2" #git ref
     CODEMETAPY_RECONCILE_ARGS="$3"
+    if [ "$REF" != "master" ] && [ "$REF" != "main" ] && [ "$REF" != "develop" ] && [ "$REF" != "base" ]; then
+        #assume we are on a release
+        CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --released"
+    fi
     SCANDIRS="$4 ."
     for scandir in $SCANDIRS; do
         oldcwd="$(pwd)"
