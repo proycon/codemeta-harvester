@@ -305,7 +305,7 @@ harvest() {
                     #Detect developmentStatus via repostatus badges
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/50-repotatus.$ID.codemeta.json"
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/10-repostatus.$ID.codemeta.json"
                     fi
                     flushlog
 
