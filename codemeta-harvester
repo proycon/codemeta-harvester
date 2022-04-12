@@ -40,13 +40,14 @@ flushlog() {
 }
 
 usage() {
-    echo "codemeta-harvester [--debug] [--ignore] [--strict] [--cachedir path] [--baseuri uri] [--outputdir path] [--opts codemetapy-options] [CONFIG_FILE_OR_DIRECTORY] ...">&2
+    echo "codemeta-harvester [--debug] [--ignore] [--regen] [--cachedir path] [--baseuri uri] [--outputdir path] [--opts codemetapy-options] [CONFIG_FILE_OR_DIRECTORY] ...">&2
     echo "   This tool harvests software metadata from source code repositories and makes it available as codemeta."
     echo "   If not file or directory is specified, the harvester will attempt to extract" >&2
     echo "   software metadata for the project in the current working directory and write a codemeta.json file there." >&2
     echo "">&2
     echo "Options:">&2
-    echo "  --ignore            Ignores reading the existing codemeta.json and overwrites it again">&2
+    echo "  --regen             Ignores reading the existing codemeta.json and regenerate it again (overwrites!)">&2
+    echo "  --ignore            Ignores reading the existing codemeta.json">&2
     echo "  --baseuri [URI]     Sets the base URI to use for all RDF resources">&2
     echo "  --opts [ARGS]       Extra options to pass to codemetapy">&2
     echo "  --identifier [ARGS] Force this identifier (only works when not providing explicit input files)">&2
@@ -71,6 +72,7 @@ done
 CACHEDIR="$TMPDIR/codemeta-harvester.cache/"
 KEEPCACHE=0
 IGNORE=0
+REGEN=0
 CLEAN_README=0
 STRICT=0
 OUTPUTDIR=$(realpath .)
@@ -98,6 +100,10 @@ while :; do
             KEEPCACHE=1
             ;;
         --ignore)
+            IGNORE=1
+            ;;
+        --regen)
+            REGEN=1
             IGNORE=1
             ;;
         --debug)
@@ -526,7 +532,7 @@ if [ $# -eq 0 ]; then
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\""
     fi
     if harvest "$IDENTIFIER" "" "$CODEMETAPY_RECONCILE_ARGS"; then
-        if [ ! -e "codemeta.json" ] || [ $IGNORE -eq 1 ]; then
+        if [ ! -e "codemeta.json" ] || [ $REGEN -eq 1 ]; then
             mv "$OUTPUTDIR/$IDENTIFIER.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
         fi
     fi
