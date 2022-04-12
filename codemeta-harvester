@@ -437,7 +437,7 @@ process() {
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
         die "invalid configuration: $ID"
     fi
-    info "--> Processing $ID ($SOURCEREPO)"
+    info "--> Processing $ID ($SOURCEREPO) [$(date)]"
     CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
@@ -488,7 +488,7 @@ process() {
         done
     fi
 
-    info "<-- Finished processing $ID ($SOURCEREPO)"
+    info "<-- Finished processing $ID ($SOURCEREPO) [$(date)]"
 }
 
 if [ $# -eq 0 ]; then
