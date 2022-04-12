@@ -133,6 +133,8 @@ harvest() {
         CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --released"
     fi
     SCANDIRS="$4 ."
+    #ensure there is nothing left from previous runs (might happen if one was run with --keep)
+    rm -rf "$CACHEDIR/tmp/*.$ID.codemeta.json" 2>/dev/null
     for scandir in $SCANDIRS; do
         oldcwd="$(pwd)"
         [ ! -d "$scandir" ] && continue
