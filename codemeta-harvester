@@ -215,6 +215,7 @@ harvest() {
 
 
             [ -e "$SCRIPTDIR/detect-license.sh" ] || die "Unable to find detect-license.sh in $SCRIPTDIR"
+            info "Looking for license...."
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
             if [ -n "$SPDX" ]; then
                 echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29-license.$ID.codemeta.json"
@@ -222,6 +223,7 @@ harvest() {
             flushlog
 
             if [ -f MAINTAINERS ]; then
+                info "Parsing MAINTAINERS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
                     error "Parsing MAINTAINERS file failed (codemetapy failed)"
@@ -230,6 +232,7 @@ harvest() {
             fi
 
             if [ -f AUTHORS ]; then
+                info "Parsing AUTHORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31-authors.$ID.codemeta.json" -i authors "AUTHORS" 2> "$TMPLOG" >&2; then
                     error "Parsing AUTHORS file failed (codemetapy failed)"
@@ -238,11 +241,13 @@ harvest() {
             fi
 
             if [ -f CONTRIBUTORS ]; then
+                info "Parsing CONTRIBUTORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32-contributors.$ID.codemeta.json" -i contributors "CONTRIBUTORS" 2> "$TMPLOG" >&2; then
                     error "Parsing CONTRIBUTORS file failed (codemetapy failed)"
                 fi
             else
+                info "Getting contributors from git..."
                 #Get all authors from git (in order of nr of commits)
                 git shortlog -s -e | grep -v "noreply.github.com" | grep -v "snyk-bot" | grep -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
@@ -254,6 +259,7 @@ harvest() {
             fi
             flushlog
 
+            info "Extracting first and last commit date from git log...."
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
             DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
             if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
@@ -263,15 +269,18 @@ harvest() {
             GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@github.com:|https://github.com/|' | sed "s|\.git$||")
             case "$GIT_REMOTE_URL" in
                 https://github.com/*|git@github.com*)
+                    info "Querying Github API ($GIT_REMOTE_URL)"
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-githubapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
                         error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
+                    flushlog
 
                     #Add README URL
                     for f in README.rst README.rst README README.TXT; do
                         if [ -e "$f" ]; then
+                            info "Found README"
                             echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
                             break
                         fi
@@ -280,13 +289,15 @@ harvest() {
                     #Add build instructions URL
                     for f in INSTALL.md INSTALL BUILD.md BUILD; do
                         if [ -e "$f" ]; then
+                            info "Found buildInstructions"
                             echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
                             break
                         fi
                     done
 
                     #Add release notes URL and download URL
-                    if [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                    if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                        info "Found releaseNotes"
                         echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43-releasenotes.$ID.codemeta.json"
                     fi
                     ;;
@@ -303,6 +314,7 @@ harvest() {
             for f in README.md README README.TXT; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
+                    info "Looking for repostatus information..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/10-repostatus.$ID.codemeta.json"
@@ -310,6 +322,7 @@ harvest() {
                     flushlog
 
                     #Detect links to documentation
+                    info "Looking for documentation links in README..."
                     SEQNR=50
                     URLS=$("$SCRIPTDIR/detect-documentation.sh" < "$f" 2> "$TMPLOG")
                     if [ -n "$URLS" ]; then
@@ -329,6 +342,7 @@ harvest() {
             if command -v somef 2> /dev/null >&2; then
                 for f in README.md README README.TXT;  do
                     if [ -e "$f" ]; then
+                        info "Analyzing README..."
                         if ! somef describe -c "$CACHEDIR/tmp/40-somef.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
                             error "README to codemeta conversion failed (proceeding regardless!)"
                         fi
