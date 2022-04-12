@@ -134,7 +134,7 @@ harvest() {
     fi
     SCANDIRS="$4 ."
     #ensure there is nothing left from previous runs (might happen if one was run with --keep)
-    rm -rf "$CACHEDIR/tmp/*.$ID.codemeta.json" 2>/dev/null
+    rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
     for scandir in $SCANDIRS; do
         oldcwd="$(pwd)"
         [ ! -d "$scandir" ] && continue
@@ -396,7 +396,7 @@ harvest() {
         flushlog
         info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
-    [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/*.$ID.codemeta.json"
+    [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
 }
 
 harvest_service() {
