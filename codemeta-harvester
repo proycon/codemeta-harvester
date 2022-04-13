@@ -75,6 +75,7 @@ IGNORE=0
 REGEN=0
 CLEAN_README=0
 STRICT=0
+STDOUT=0
 OUTPUTDIR=$(realpath .)
 CODEMETAPY_ARGS=""
 
@@ -115,6 +116,9 @@ while :; do
             ;;
         --strict)
             STRICT=1
+            ;;
+        --stdout)
+            STDOUT=1
             ;;
         --opts)
             CODEMETAPY_ARGS="$CODEMETAPY_ARGS $2"
@@ -398,15 +402,20 @@ harvest() {
 
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
-    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS -O \"$OUTPUTDIR/$ID.codemeta.json\" $files"
+    if [ $STDOUT -eq 0 ]; then
+        OUT_ARG="-O $OUTPUTDIR/$ID.codemeta.json"
+    else
+        OUT_ARG=""
+    fi
+    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS $OUT_ARG $files"
     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_*ARGS)
-    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" $files 2> "$TMPLOG" >&2; then
+    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS $OUT_ARG $files 2> "$TMPLOG" >&2; then
         error "Failed to consolidate metadata $ID"
-        rm "$OUTPUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
+        [ $STDOUT -eq 0 ] && rm "$OUTPUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
     else
         flushlog
-        info "Output written to $OUTPUTDIR/$ID.codemeta.json"
+        [ $STDOUT -eq 0 ] && info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
     [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
 }
@@ -417,6 +426,11 @@ harvest_service() {
     ID="$1"
     URL="$2"
     info "Harvesting remote service URL $URL for $ID: codemetapy $CODEMETAPY_ARGS -O \"$CACHEDIR/tmp/$ID.codemeta.json\" \"$OUTPUTDIR/$ID.codemeta.json\" \"$URL\""
+    if [ $STDOUT -eq 0 ]; then
+        OUT_ARG="-O $OUTPUTDIR/$ID.codemeta.json"
+    else
+        OUT_ARG=""
+    fi
     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
     if codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/$ID.codemeta.json" "$OUTPUTDIR/$ID.codemeta.json" "$URL" 2> "$TMPLOG" >&2; then
         flushlog
@@ -467,6 +481,7 @@ process() {
     fi
     info "--> Processing $ID ($SOURCEREPO) [$(date)]"
     CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
+    rm -rf "$CACHEDIR/tmp/$ID.log" 2> /dev/null #clean old logs (if any)
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
         info "Git updating cached clone of $SOURCEREPO..."
@@ -484,7 +499,7 @@ process() {
             if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
-            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1 | tee "$CACHEDIR/tmp/$ID.log" >&2
         else
             error "Failed to git pull $SOURCEREPO"
             return 1
@@ -502,7 +517,11 @@ process() {
             if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
-            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+            if [ $STDOUT -eq 0 ]; then
+                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1 | tee "$CACHEDIR/tmp/$ID.log" >&2
+            else
+                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+            fi
         else
             error "Failed to git clone $SOURCEREPO"
             return 1
@@ -512,10 +531,15 @@ process() {
     #Process services
     if [ -n "$SERVICE_URLS" ] && [ "$SERVICE_URLS" != "null" ]; then
         for URL in $SERVICE_URLS; do
-            harvest_service "$ID" "$URL"
+            if [ $STDOUT -eq 0 ]; then
+                harvest_service "$ID" "$URL" 2>&1  | tee -a "$CACHEDIR/tmp/$ID.log" >&2
+            else
+                harvest_service "$ID" "$URL"
+            fi
         done
     fi
 
+    [ $STDOUT -eq 0 ] && info "Log written to $CACHEDIR/tmp/$ID.log"
     info "<-- Finished processing $ID ($SOURCEREPO) [$(date)]"
 }
 
