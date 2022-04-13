@@ -200,7 +200,7 @@ harvest() {
                 info "found python setup for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20-python.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
-                    error "python setup.py to codemeta conversion failed (codemetapy failed)"
+                    error "python setup.py to codemeta conversion failed for $ID (codemetapy failed)"
                     [ $STRICT -eq 1 ] && return 1
                 fi
                 flushlog
@@ -210,7 +210,7 @@ harvest() {
                 info "found pom.xml (Java/Maven) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/21-java.$ID.codemeta.json" pom.xml 2> "$TMPLOG" >&2; then
-                    error "pom.xml to codemeta conversion failed (codemetapy failed)"
+                    error "pom.xml to codemeta conversion failed for $ID (codemetapy failed)"
                     [ $STRICT -eq 1 ] && return 1
                 fi
                 flushlog
@@ -220,7 +220,7 @@ harvest() {
                 info "found package.json (NodeJS) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/22-npm.$ID.codemeta.json" package.json 2> "$TMPLOG" >&2; then
-                    error "package.json to codemeta conversion failed (codemetapy failed)"
+                    error "package.json to codemeta conversion failed for $ID (codemetapy failed)"
                     [ $STRICT -eq 1 ] && return 1
                 fi
                 flushlog
@@ -239,7 +239,7 @@ harvest() {
                 info "Parsing MAINTAINERS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
-                    error "Parsing MAINTAINERS file failed (codemetapy failed)"
+                    error "Parsing MAINTAINERS file failed for $ID (codemetapy failed)"
                 fi
                 flushlog
             fi
@@ -248,7 +248,7 @@ harvest() {
                 info "Parsing AUTHORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/31-authors.$ID.codemeta.json" -i authors "AUTHORS" 2> "$TMPLOG" >&2; then
-                    error "Parsing AUTHORS file failed (codemetapy failed)"
+                    error "Parsing AUTHORS file failed for $ID (codemetapy failed)"
                 fi
                 flushlog
             fi
@@ -257,7 +257,7 @@ harvest() {
                 info "Parsing CONTRIBUTORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32-contributors.$ID.codemeta.json" -i contributors "CONTRIBUTORS" 2> "$TMPLOG" >&2; then
-                    error "Parsing CONTRIBUTORS file failed (codemetapy failed)"
+                    error "Parsing CONTRIBUTORS file failed for $ID (codemetapy failed)"
                 fi
             else
                 info "Getting contributors from git..."
@@ -266,7 +266,7 @@ harvest() {
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32-contributors.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
-                        error "Parsing contributors failed (codemetapy failed)"
+                        error "Parsing contributors failed for $ID (codemetapy failed)"
                     fi
                 fi
             fi
@@ -286,7 +286,7 @@ harvest() {
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-githubapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
-                        error "conversion from Github API query failed ($GIT_REMOTE_URL) (codemetapy failed)"
+                        error "conversion from Github API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
                     flushlog
 
@@ -357,7 +357,7 @@ harvest() {
                     if [ -e "$f" ]; then
                         info "Analyzing README..."
                         if ! somef describe -c "$CACHEDIR/tmp/40-somef.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
-                            error "README to codemeta conversion failed (proceeding regardless!)"
+                            error "README to codemeta conversion failed for $ID"
                         fi
                         flushlog
                         break
@@ -378,7 +378,7 @@ harvest() {
         fi
     done
 
-    files=$(ls -r "$CACHEDIR"/tmp/*."$ID".codemeta.json)
+    files=$(ls -r "$CACHEDIR"/tmp/*."$ID".codemeta.json | tr "\n" " ")
 
     if [ -z "$files" ]; then
         error "No metadata sources found for $ID"
@@ -394,7 +394,7 @@ harvest() {
         fi
     done
 
-    [ $RESCAN -eq 1 ] && files=$(ls -r "$CACHEDIR"/tmp/*."$ID".codemeta.json)
+    [ $RESCAN -eq 1 ] && files=$(ls -r "$CACHEDIR"/tmp/*."$ID".codemeta.json | tr "\n" " ")
 
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
