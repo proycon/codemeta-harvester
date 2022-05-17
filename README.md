@@ -100,6 +100,6 @@ Or for Docker:
 `docker run -v /path/to/your/configdir/:/config -v .:/data proycon/codemeta-harvester /config`
 
 
+## Acknowledgement
 
-
-
+This software was funded in the scope of the [CLARIAH-PLUS project](https://clariah.nl).
