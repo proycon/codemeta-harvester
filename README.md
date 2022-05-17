@@ -44,6 +44,9 @@ software as follows:
     * GNU Make
     * GNU awk
 
+You can use ``make devenv`` if you want to rely on the latest development release of codemetapy, rather than the latest
+stable version (this will create a `devenv/` dir instead of `env/`)
+
 ## Usage: producing codemeta for your project
 
 In your project directory, which ideally should be a git clone, you can just run codemeta-harvester to create a `codemeta.json`
