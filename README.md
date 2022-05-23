@@ -56,9 +56,9 @@ file based on the files in your repository:
 
 You probably use the docker container, then the syntax is as follows:
 
-`docker run -v .:/data proycon/codemeta-harvester`
+`docker run -v $(pwd):/data proycon/codemeta-harvester`
 
-The `-v` argument mounts your current working directory in the container.
+The `-v` argument mounts your current working directory in the container, you may adapt it according to your needs.
 
 If you want to regenerate an existing ``codemeta.json``, rather than use it as input which would be the default
 behaviour, then add the ``--regen`` parameter. This overwrites any existing `codemeta.json`.
@@ -97,7 +97,7 @@ Pass the directory where you put your configurations (or a single configuration 
 
 Or for Docker:
 
-`docker run -v /path/to/your/configdir/:/config -v .:/data proycon/codemeta-harvester /config`
+`docker run -v /path/to/your/configdir/:/config -v $(pwd):/data proycon/codemeta-harvester /config`
 
 
 ## Acknowledgement
