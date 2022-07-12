@@ -5,7 +5,7 @@
 This is a harvester for software metadata. It actively attempts to detect and
 convert software metadata in source code repositories and converts this to a
 unified [codemeta](https://codemeta.github.io) representation.
-
+ 
 The tool is implemented as a simple POSIX shell script that in turn invokes a number of tools to
 do the actual work:
 
