@@ -63,8 +63,8 @@ The `-v` argument mounts your current working directory in the container, you ma
 If you want to regenerate an existing ``codemeta.json``, rather than use it as input which would be the default
 behaviour, then add the ``--regen`` parameter. This overwrites any existing `codemeta.json`.
 
-The harvester can make use of the Github API to query metdata from GitHub, but this allows only limited anonymous requests. Please set the
-environment variable `$GITHUB_TOKEN` to a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token), if you use Docker you should pass it to the container using `--env-arg GITHUB_TOKEN=$GITHUB_TOKEN`.
+The harvester can make use of the Github/GitLab API to query metdata from GitHub/GitLab, but this allows only limited anonymous requests. Please set the
+environment variable `$GITHUB_TOKEN`/`$GITLAB_TOKEN` to a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) / [gitlab p. access token] (https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html), if you use Docker you should pass it to the container using `--env-arg GITHUB_TOKEN=$GITHUB_TOKEN`/`--env-arg GITLAB_TOKEN=$GITLAB_TOKEN`.
 
 ## Usage: harvesting metadata for various projects
 

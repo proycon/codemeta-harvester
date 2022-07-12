@@ -283,14 +283,14 @@ harvest() {
                 echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39-gitdate.$ID.codemeta.json"
             fi
 
-            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@github.com:|https://github.com/|' | sed "s|\.git$||")
+            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@github.com:|https://github.com/|' | sed 's|git@gitlab.com:|https://gitlab.com/|' | sed "s|\.git$||")
             case "$GIT_REMOTE_URL" in
-                https://github.com/*|git@github.com*)
-                    info "Querying Github API ($GIT_REMOTE_URL)"
+                https://github.com/*|https://gitlab.com/*)
+                    info "Querying Github/GitLab API ($GIT_REMOTE_URL)"
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-githubapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
-                        error "conversion from Github API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
+                        error "conversion from Github/GitLab API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
                     flushlog
 
@@ -548,7 +548,7 @@ if [ $# -eq 0 ]; then
         IDENTIFIER="$(basename "$(pwd)")"
     fi
     info "Attempting to guess source repo"
-    SOURCEREPO=$(git remote get-url origin | sed "s|git@github.com:|https://github.com/|")
+    SOURCEREPO=$(git remote get-url origin | sed "s|git@github.com:|https://github.com/|" | sed "s|git@gitlab.com:|https://gitlab.com/|")
     if [ -n "$SOURCEREPO" ]; then
         info "Source repo is $SOURCEREPO"
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\" --codeRepository \"$SOURCEREPO\""
