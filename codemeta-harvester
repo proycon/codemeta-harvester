@@ -276,7 +276,8 @@ harvest() {
             fi
             flushlog
 
-            info "Extracting first and last commit date from git log...."
+            info "Extracting last and first commit date from git log...."
+            #alternative: git shortlog --format=format:%cI | grep -vF '(' | sed 's/[[:space:]]//g' |  awk NF | tail -n 1 OR head -1
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
             DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
             if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
@@ -288,7 +289,7 @@ harvest() {
                 https://github.com/*|https://gitlab.com/*)
                     info "Querying Github/GitLab API ($GIT_REMOTE_URL)"
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-githubapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-gitapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
 
                         error "conversion from Github/GitLab API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
@@ -505,8 +506,8 @@ process() {
         fi
     else
         cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
-        info "Git cloning $SOURCEREPO..."
-        if git clone "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
+        info "Git light cloning $SOURCEREPO..."
+        if git clone --filter=blob:limit=999k "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
             cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
             if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
