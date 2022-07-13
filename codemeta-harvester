@@ -548,7 +548,7 @@ if [ $# -eq 0 ]; then
         IDENTIFIER="$(basename "$(pwd)")"
     fi
     info "Attempting to guess source repo"
-    SOURCEREPO=$(git remote get-url origin | sed -e "s|git@\(.*\):|https://\1|")
+    SOURCEREPO=$(git remote get-url origin | sed -e "s|git@\(.*\):|https://\1/|")
     if [ -n "$SOURCEREPO" ]; then
         info "Source repo is $SOURCEREPO"
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\" --codeRepository \"$SOURCEREPO\""
