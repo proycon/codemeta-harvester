@@ -1,6 +1,6 @@
 FROM debian:stable-slim
 
-RUN apt-get update -qqy && apt-get install -qqy python3 python3-pip \ 
+RUN apt-get update -qqy --no-install-recommends && apt-get install -qqy python3 python3-pip \ 
 python3-yaml python3-ruamel.yaml python3-requests python3-matplotlib python3-markdown python3-rdflib python3-lxml python3-wheel \
 git curl recode gawk pandoc && \
 apt-get clean -qqy ; apt-get autoremove --yes ; rm -rf /var/lib/{apt,dpkg,cache,log}/
