@@ -14,6 +14,8 @@ ENV GIT_TERMINAL_PROMPT=0
 #TODO: replace with stable version after codemetapy release --------------v
 ARG CODEMETAPY_REPO_URL=https://github.com/xmichele/codemetapy.git
 RUN python3 -m pip install  --no-cache-dir --prefix /usr Cython git+$CODEMETAPY_REPO_URL cffconvert
+COPY codemeta-harvester /usr/bin/
+COPY *.sh /usr/bin/
 
 WORKDIR /data
 ENTRYPOINT ["codemeta-harvester"]
