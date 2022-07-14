@@ -1,17 +1,19 @@
-FROM alpine:latest
+FROM debian:stable-slim
 
-RUN apk add python3 py3-pip py3-yaml py3-ruamel.yaml py3-requests py3-matplotlib py3-markdown py3-rdflib py3-lxml py3-wheel cython git dasel curl recode gawk
+RUN apt-get update -qqy && apt-get install -qqy python3 python3-pip \ 
+python3-yaml python3-ruamel.yaml python3-requests python3-matplotlib python3-markdown python3-rdflib python3-lxml python3-wheel \
+git curl recode gawk pandoc && \
+apt-get clean -qqy ; apt-get autoremove --yes ; rm -rf /var/lib/{apt,dpkg,cache,log}/
 
-#pandoc is not in stable yet, grab from edge/testing:
-RUN apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ pandoc
+#dasel cython
+RUN curl -sSLf "$(curl -sSLf https://api.github.com/repos/tomwright/dasel/releases/latest | grep browser_download_url | grep linux_amd64 | grep -v .gz | cut -d\" -f 4)" -L -o dasel && \
+chmod +x dasel && \
+mv ./dasel /usr/local/bin/dasel
 
 ENV GIT_TERMINAL_PROMPT=0
-
 #TODO: replace with stable version after codemetapy release --------------v
-RUN python3 -m pip install  --no-cache-dir --prefix /usr git+https://github.com/proycon/codemetapy.git cffconvert
-COPY codemeta-harvester /usr/bin/
-COPY *.sh /usr/bin/
+ARG CODEMETAPY_REPO_URL=https://github.com/xmichele/codemetapy.git
+RUN python3 -m pip install  --no-cache-dir --prefix /usr Cython git+$CODEMETAPY_REPO_URL cffconvert
 
 WORKDIR /data
-
 ENTRYPOINT ["codemeta-harvester"]
