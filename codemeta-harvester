@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
+#Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
@@ -285,12 +286,11 @@ harvest() {
             fi
 
             GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
-            case "$GIT_REMOTE_URL" in
-                https://github.com/*|https://gitlab.com/*)
+            check=$(echo $GIT_REMOTE_URL | grep "https://github.com/\|https://gitlab.com/")
+            if  [ -n "$check" ] || [ -n "$GITHUB_TOKEN" ] || [ -n "$GITLAB_TOKEN" ]; then
                     info "Querying Github/GitLab API ($GIT_REMOTE_URL)"
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-gitapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
-
                         error "conversion from Github/GitLab API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
                     fi
                     flushlog
@@ -318,10 +318,7 @@ harvest() {
                         info "Found releaseNotes"
                         echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43-releasenotes.$ID.codemeta.json"
                     fi
-                    ;;
-            esac
-
-
+            fi
 
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
