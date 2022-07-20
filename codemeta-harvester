@@ -285,7 +285,7 @@ harvest() {
                 echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39-gitdate.$ID.codemeta.json"
             fi
 
-            #GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
+            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
             #check=$(echo $GIT_REMOTE_URL | grep "https://github.com/\|https://gitlab.com/")
             #if  [ -n "$check" ] || [ -n "$GITHUB_TOKEN" ] || [ -n "$GITLAB_TOKEN" ]; then
             info "Querying Github/GitLab API or WebPage scraping ($GIT_REMOTE_URL)"
