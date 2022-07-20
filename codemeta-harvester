@@ -285,40 +285,40 @@ harvest() {
                 echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39-gitdate.$ID.codemeta.json"
             fi
 
-            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
-            check=$(echo $GIT_REMOTE_URL | grep "https://github.com/\|https://gitlab.com/")
-            if  [ -n "$check" ] || [ -n "$GITHUB_TOKEN" ] || [ -n "$GITLAB_TOKEN" ]; then
-                    info "Querying Github/GitLab API ($GIT_REMOTE_URL)"
-                    #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-gitapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
-                        error "conversion from Github/GitLab API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
-                    fi
-                    flushlog
-
-                    #Add README URL
-                    for f in README.rst README.rst README README.TXT; do
-                        if [ -e "$f" ]; then
-                            info "Found README"
-                            echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
-                            break
-                        fi
-                    done
-
-                    #Add build instructions URL
-                    for f in INSTALL.md INSTALL BUILD.md BUILD; do
-                        if [ -e "$f" ]; then
-                            info "Found buildInstructions"
-                            echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
-                            break
-                        fi
-                    done
-
-                    #Add release notes URL and download URL
-                    if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
-                        info "Found releaseNotes"
-                        echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43-releasenotes.$ID.codemeta.json"
-                    fi
+            #GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
+            #check=$(echo $GIT_REMOTE_URL | grep "https://github.com/\|https://gitlab.com/")
+            #if  [ -n "$check" ] || [ -n "$GITHUB_TOKEN" ] || [ -n "$GITLAB_TOKEN" ]; then
+            info "Querying Github/GitLab API or WebPage scraping ($GIT_REMOTE_URL)"
+            #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
+            if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-gitapi-web.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+                error "conversion from Github/GitLab API or WebPage scraping query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
             fi
+            flushlog
+
+            #Add README URL
+            for f in README.rst README.rst README README.TXT; do
+                if [ -e "$f" ]; then
+                    info "Found README"
+                    echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
+                    break
+                fi
+            done
+
+            #Add build instructions URL
+            for f in INSTALL.md INSTALL BUILD.md BUILD; do
+                if [ -e "$f" ]; then
+                    info "Found buildInstructions"
+                    echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
+                    break
+                fi
+            done
+
+            #Add release notes URL and download URL
+            if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                info "Found releaseNotes"
+                echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43-releasenotes.$ID.codemeta.json"
+            fi
+            #fi
 
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
