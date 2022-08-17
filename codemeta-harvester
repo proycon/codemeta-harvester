@@ -3,6 +3,7 @@
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 #Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
+VERSION="0.2" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
@@ -57,6 +58,7 @@ usage() {
     echo "  --keep              Keep intermediate output (in cachedir), don't clean up (useful for debugging)"
     echo "  --strict            Fail a conversion if one of it's main components fails"
     echo "  --stdout            Don't write files but output to stdout"
+    echo "  --version           Output version"
 }
 
 missing=0
@@ -124,6 +126,10 @@ while :; do
         --opts)
             CODEMETAPY_ARGS="$CODEMETAPY_ARGS $2"
             shift
+            ;;
+        -v|--version)
+            echo $VERSION
+            exit 0
             ;;
         -?*)
             die "Unknown option: $1"
