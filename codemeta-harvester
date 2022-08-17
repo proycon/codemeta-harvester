@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
+#Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
@@ -266,7 +267,7 @@ harvest() {
             else
                 info "Getting contributors from git..."
                 #Get all authors from git (in order of nr of commits)
-                git shortlog -s -e | grep -v "noreply.github.com" | grep -v "snyk-bot" | grep -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
+                git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32-contributors.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
@@ -276,51 +277,46 @@ harvest() {
             fi
             flushlog
 
-            info "Extracting first and last commit date from git log...."
+            info "Extracting last and first commit date from git log...."
+            #alternative: git shortlog --format=format:%cI | grep -vF '(' | sed 's/[[:space:]]//g' |  awk NF | tail -n 1 OR head -1
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
             DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
             if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
                 echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39-gitdate.$ID.codemeta.json"
             fi
 
-            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@github.com:|https://github.com/|' | sed "s|\.git$||")
-            case "$GIT_REMOTE_URL" in
-                https://github.com/*|git@github.com*)
-                    info "Querying Github API ($GIT_REMOTE_URL)"
-                    #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-githubapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
+            info "Querying Github/GitLab API ($GIT_REMOTE_URL)"
+            #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
+            if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-gitapi.$ID.codemeta.json" "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+                error "conversion from Github/GitLab API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
+            fi
+            flushlog
 
-                        error "conversion from Github API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
-                    fi
-                    flushlog
+            #Add README URL
+            for f in README.rst README.rst README README.TXT; do
+                if [ -e "$f" ]; then
+                    info "Found README"
+                    echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
+                    break
+                fi
+            done
 
-                    #Add README URL
-                    for f in README.rst README.rst README README.TXT; do
-                        if [ -e "$f" ]; then
-                            info "Found README"
-                            echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
-                            break
-                        fi
-                    done
+            #Add build instructions URL
+            for f in INSTALL.md INSTALL BUILD.md BUILD; do
+                if [ -e "$f" ]; then
+                    info "Found buildInstructions"
+                    echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
+                    break
+                fi
+            done
 
-                    #Add build instructions URL
-                    for f in INSTALL.md INSTALL BUILD.md BUILD; do
-                        if [ -e "$f" ]; then
-                            info "Found buildInstructions"
-                            echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
-                            break
-                        fi
-                    done
-
-                    #Add release notes URL and download URL
-                    if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
-                        info "Found releaseNotes"
-                        echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43-releasenotes.$ID.codemeta.json"
-                    fi
-                    ;;
-            esac
-
-
+            #Add release notes URL and download URL
+            if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                info "Found releaseNotes"
+                echo " { \"releaseNotes\": \"$GIT_REMOTE_URL/releases/tag/$REF\", \"downloadUrl\": \"$GIT_REMOTE_URL/archive/refs/tags/$REF.zip\" }"  > "$CACHEDIR/tmp/43-releasenotes.$ID.codemeta.json"
+            fi
+            #fi
 
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
@@ -505,8 +501,8 @@ process() {
         fi
     else
         cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
-        info "Git cloning $SOURCEREPO..."
-        if git clone "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
+        info "Git light cloning $SOURCEREPO..."
+        if git clone --filter=blob:limit=999k "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
             cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
             if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                 REF=$(get_latest_version)
@@ -548,7 +544,7 @@ if [ $# -eq 0 ]; then
         IDENTIFIER="$(basename "$(pwd)")"
     fi
     info "Attempting to guess source repo"
-    SOURCEREPO=$(git remote get-url origin | sed "s|git@github.com:|https://github.com/|")
+    SOURCEREPO=$(git remote get-url origin | sed -e "s|git@\(.*\):|https://\1/|")
     if [ -n "$SOURCEREPO" ]; then
         info "Source repo is $SOURCEREPO"
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\" --codeRepository \"$SOURCEREPO\""
