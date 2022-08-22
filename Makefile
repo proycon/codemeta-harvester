@@ -1,7 +1,10 @@
-.PHONY: check docker env devenv
+.PHONY: check docker env devenv docker-dev docker
 
 check:
 	shellcheck codemeta-harvester *.sh
+
+docker-dev:
+	docker build -t proycon/codemeta-harvester:dev --build-arg CODEMETAPY_VERSION=git+https://github.com/proycon/codemetapy.git@master .
 
 docker:
 	docker build -t proycon/codemeta-harvester .
