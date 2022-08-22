@@ -58,6 +58,8 @@ usage() {
     echo "  --keep              Keep intermediate output (in cachedir), don't clean up (useful for debugging)"
     echo "  --strict            Fail a conversion if one of it's main components fails"
     echo "  --stdout            Don't write files but output to stdout"
+    echo "  --validate [file]   SHACL file to validate all metadata against"
+    echo "  --validatetext      Header text for validation reports"
     echo "  --version           Output version"
 }
 
@@ -80,6 +82,8 @@ CLEAN_README=0
 STRICT=0
 STDOUT=0
 OUTPUTDIR=$(realpath .)
+VALIDATE=
+VALIDATETEXT=
 CODEMETAPY_ARGS=""
 
 while :; do
@@ -125,6 +129,14 @@ while :; do
             ;;
         --opts)
             CODEMETAPY_ARGS="$CODEMETAPY_ARGS $2"
+            shift
+            ;;
+        --validate)
+            VALIDATE="$2"
+            shift
+            ;;
+        --validatetext)
+            VALIDATETEXT="$2"
             shift
             ;;
         -v|--version)
@@ -556,6 +568,10 @@ if [ $# -eq 0 ]; then
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\" --codeRepository \"$SOURCEREPO\""
     else
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\""
+    fi
+    if [ -n "$VALIDATE" ]; then
+        CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate \"$VALIDATE\""
+        [ -n "$VALIDATETEXT" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validatetext \"$VALIDATETEXT\""
     fi
     if harvest "$IDENTIFIER" "" "$CODEMETAPY_RECONCILE_ARGS"; then
         if [ ! -e "codemeta.json" ] || [ $REGEN -eq 1 ]; then
