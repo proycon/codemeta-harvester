@@ -586,7 +586,7 @@ else
             process "$TARGET"
         elif [ -d "$TARGET" ]; then
             for SUBTARGET in "$TARGET"/*.yml; do
-                process "$SUBTARGET"
+                [ -e "$SUBTARGET" ] && process "$SUBTARGET"
             done
         fi
     done
