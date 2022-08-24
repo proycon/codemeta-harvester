@@ -579,8 +579,7 @@ if [ $# -eq 0 ]; then
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\""
     fi
     if [ -n "$VALIDATE" ]; then
-        CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate \"$VALIDATE\""
-        [ -n "$VALIDATETEXT" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validatetext \"$VALIDATETEXT\""
+        CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
     fi
     if harvest "$IDENTIFIER" "" "$CODEMETAPY_RECONCILE_ARGS"; then
         if [ ! -e "codemeta.json" ] || [ $REGEN -eq 1 ]; then
