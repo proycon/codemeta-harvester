@@ -97,10 +97,12 @@ while :; do
             shift
             ;;
         -O|--outputdir)
+            [ -n "$2" ] || die "Expected value for --outputdir"
             OUTPUTDIR="$(realpath "$2")"
             shift
             ;;
         -b|--baseuri)
+            [ -n "$2" ] || die "Expected value for --baseurl"
             CODEMETAPY_ARGS="$CODEMETAPY_ARGS --baseuri $2"
             shift
             ;;
@@ -118,6 +120,7 @@ while :; do
             DEBUG=1
             ;;
         --identifier)
+            [ -n "$2" ] || die "Expected value for --identifier"
             IDENTIFIER="$2"
             shift
             ;;
@@ -128,14 +131,17 @@ while :; do
             STDOUT=1
             ;;
         --opts)
+            [ -n "$2" ] || die "Expected value for --opts"
             CODEMETAPY_ARGS="$CODEMETAPY_ARGS $2"
             shift
             ;;
         --validate)
+            [ -n "$2" ] || die "Expected value for --validate"
             VALIDATE="$2"
             shift
             ;;
         --validatetext)
+            [ -n "$2" ] || die "Expected value for --validatetext"
             VALIDATETEXT="$2"
             shift
             ;;
