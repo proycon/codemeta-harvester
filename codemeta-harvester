@@ -315,7 +315,7 @@ harvest() {
             flushlog
 
             #Add README URL
-            for f in README.rst README.rst README README.TXT; do
+            for f in README.md README.rst README README.txt README.TXT readme.txt; do
                 if [ -e "$f" ]; then
                     info "Found README"
                     echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
