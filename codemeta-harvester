@@ -324,7 +324,7 @@ harvest() {
             done
 
             #Add build instructions URL
-            for f in INSTALL.md INSTALL BUILD.md BUILD; do
+            for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD; do
                 if [ -e "$f" ]; then
                     info "Found buildInstructions"
                     echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
@@ -345,7 +345,7 @@ harvest() {
                 CLEAN_README=1
             fi
 
-            for f in README.md README README.TXT; do
+            for f in README.md README README.TXT README.txt readme.txt; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
                     info "Looking for repostatus information..."
@@ -374,7 +374,7 @@ harvest() {
 
             #somef is optional because it relies on many dependencies that not everybody may want:
             if command -v somef 2> /dev/null >&2; then
-                for f in README.md README README.TXT;  do
+                for f in README.md README README.TXT README.txt readme.txt;  do
                     if [ -e "$f" ]; then
                         info "Analyzing README..."
                         if ! somef describe -c "$CACHEDIR/tmp/40-somef.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
