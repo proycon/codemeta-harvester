@@ -179,6 +179,7 @@ harvest() {
     #ensure there is nothing left from previous runs (might happen if one was run with --keep)
     rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
     for scandir in $SCANDIRS; do
+        info "Scanning directory $(realpath "$scandir") for harvestable resources..."
         oldcwd="$(pwd)"
         [ ! -d "$scandir" ] && continue
         cd "$scandir" || die "Unable to enter $scandir"
