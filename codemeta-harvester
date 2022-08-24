@@ -417,10 +417,47 @@ harvest() {
                 info "Fall back to git tag if no version number is specified..."
                 echo "{ \"version\": \"$REF\" }" > "$CACHEDIR/tmp/99-version.$ID.codemeta.json"
             fi
-
             #remove the readme again if it comes from our conversion
             [ $CLEAN_README -eq 1 ] && rm README.md
 
+
+            cd "$oldcwd" || die "Unable to return to $oldcwd"
+        fi
+
+        if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+            #some properties we prefer to take from the very latest master branch
+            #and backport to older versions (such as maintainer and repostatus)
+            #because these are more repo-bound than version bound...
+
+            #we do this even if an explicit codemeta.json was provided!
+
+            CURRENT_BRANCH=$(git branch)
+            DEFAULT_BRANCH=$(git_default_branch)
+            oldcwd="$(pwd)"
+            cd "$scandir" || die "Unable to enter $scandir"
+            git checkout "$DEFAULT_BRANCH" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
+            for f in README.md README README.TXT README.txt readme.txt; do
+                if [ -e "$f" ]; then
+                    #Detect developmentStatus via repostatus badges
+                    info "Looking for repostatus information in master branch..."
+                    REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
+                    if [ -n "$REPOSTATUS" ]; then
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/10-repostatus.$ID.codemeta.json" #this overwrite the version-specific one
+                    fi
+                    flushlog
+                fi
+            done
+
+            if [ -f MAINTAINERS ]; then
+                info "Parsing MAINTAINERS from master branch..."
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
+                    error "Parsing MAINTAINERS file failed for $ID (codemetapy failed)"
+                fi
+                flushlog
+            fi
+
+            git checkout "$CURRENT_BRANCH" || die "Unable to switch to previous git branch"
             cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
     done
