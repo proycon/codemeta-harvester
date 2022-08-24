@@ -452,7 +452,7 @@ harvest() {
     fi
     info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS --textv \"$VALIDATETEXT\" $OUT_ARG $files"
     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_*ARGS)
-    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS --textv "$VALIDATETEXT" $OUT_ARG $files 2> "$TMPLOG" >&2; then
+    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS --enrich --textv "$VALIDATETEXT" $OUT_ARG $files 2> "$TMPLOG" >&2; then
         error "Failed to consolidate metadata $ID"
         [ $STDOUT -eq 0 ] && rm "$OUTPUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
