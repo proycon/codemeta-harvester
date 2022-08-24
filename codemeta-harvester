@@ -205,6 +205,7 @@ harvest() {
 
             #If there is a codemeta-harvest.json, we will add it to
             #any other existing metadata that can be found
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -e codemeta-harvest.json ]; then
                 info "found codemeta-harvest.json for $ID"
                 #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
@@ -217,6 +218,7 @@ harvest() {
                 fi
             fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
             for f in CITATION.cff CITATION.CFF CITATION; do
                 if [ -e "$f" ]; then
                     info "found CITATION.cff for $ID, converting to codemeta"
@@ -229,6 +231,7 @@ harvest() {
                 fi
             done
 
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -e setup.py ] || [ -e pyproject.toml ]; then
                 info "found python setup for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -239,6 +242,7 @@ harvest() {
                 flushlog
             fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -e pom.xml ]; then
                 info "found pom.xml (Java/Maven) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -249,6 +253,7 @@ harvest() {
                 flushlog
             fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -e package.json ]; then
                 info "found package.json (NodeJS) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -260,6 +265,7 @@ harvest() {
             fi
 
 
+            cd "$scandir" || die "Unable to enter $scandir"
             [ -e "$SCRIPTDIR/detect-license.sh" ] || die "Unable to find detect-license.sh in $SCRIPTDIR"
             info "Looking for license...."
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
@@ -268,6 +274,7 @@ harvest() {
             fi
             flushlog
 
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -f MAINTAINERS ]; then
                 info "Parsing MAINTAINERS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -277,6 +284,7 @@ harvest() {
                 flushlog
             fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -f AUTHORS ]; then
                 info "Parsing AUTHORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -286,6 +294,7 @@ harvest() {
                 flushlog
             fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -f CONTRIBUTORS ]; then
                 info "Parsing CONTRIBUTORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -309,6 +318,7 @@ harvest() {
             fi
             flushlog
 
+            cd "$scandir" || die "Unable to enter $scandir"
             info "Extracting last and first commit date from git log...."
             #alternative: git shortlog --format=format:%cI | grep -vF '(' | sed 's/[[:space:]]//g' |  awk NF | tail -n 1 OR head -1
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
@@ -326,6 +336,7 @@ harvest() {
             flushlog
 
             #Add README URL
+            cd "$scandir" || die "Unable to enter $scandir"
             for f in README.md README.rst README README.txt README.TXT readme.txt; do
                 if [ -e "$f" ]; then
                     info "Found README"
@@ -335,6 +346,7 @@ harvest() {
             done
 
             #Add build instructions URL
+            cd "$scandir" || die "Unable to enter $scandir"
             for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD; do
                 if [ -e "$f" ]; then
                     info "Found buildInstructions"
@@ -350,12 +362,14 @@ harvest() {
             fi
             #fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
                 pandoc README.rst --to gfm -o README.md
                 CLEAN_README=1
             fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
             for f in README.md README README.TXT README.txt readme.txt; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
@@ -384,6 +398,7 @@ harvest() {
             done
 
             #somef is optional because it relies on many dependencies that not everybody may want:
+            cd "$scandir" || die "Unable to enter $scandir"
             if command -v somef 2> /dev/null >&2; then
                 for f in README.md README README.TXT README.txt readme.txt;  do
                     if [ -e "$f" ]; then
