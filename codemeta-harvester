@@ -147,11 +147,14 @@ while :; do
             die "Unknown option: $1"
             ;;
         *)
+            [ ! -e "$1" ] && die "Expected configuration file/directory, got invalid file/directory '$1'"
             break
     esac
 
     shift
 done
+
+info "codemeta-harvester $VERSION (outputdir=$OUTPUTDIR, cachedir=$CACHEDIR, opts=$CODEMETAPY_ARGS)"
 
 TMPLOG="$CACHEDIR/codemeta-harvester.debug"
 
@@ -561,6 +564,7 @@ if [ $# -eq 0 ]; then
     if [ -z "$IDENTIFIER" ]; then
         IDENTIFIER="$(basename "$(pwd)")"
     fi
+    info "No configuration provided, harvesting current project"
     info "Attempting to guess source repo"
     SOURCEREPO=$(git remote get-url origin | sed -e "s|git@\(.*\):|https://\1/|")
     if [ -n "$SOURCEREPO" ]; then
