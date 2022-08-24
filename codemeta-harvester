@@ -288,12 +288,16 @@ harvest() {
             else
                 info "Getting contributors from git..."
                 #Get all authors from git (in order of nr of commits)
-                git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"
+                if ! git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot | sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"; then
+                    error "git shortlog failed"
+                fi
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
                     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                     if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/32-contributors.$ID.codemeta.json" -i contributors "$CACHEDIR/tmp/$ID.CONTRIBUTORS" 2> "$TMPLOG" >&2; then
                         error "Parsing contributors failed for $ID (codemetapy failed)"
                     fi
+                else
+                    info "No git contributors found"
                 fi
             fi
             flushlog
