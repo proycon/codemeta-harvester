@@ -424,9 +424,9 @@ harvest() {
     else
         OUT_ARG=""
     fi
-    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS $OUT_ARG $files"
+    info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS --textv \"$VALIDATETEXT\" $OUT_ARG $files"
     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_*ARGS)
-    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS $OUT_ARG $files 2> "$TMPLOG" >&2; then
+    if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS --textv "$VALIDATETEXT" $OUT_ARG $files 2> "$TMPLOG" >&2; then
         error "Failed to consolidate metadata $ID"
         [ $STDOUT -eq 0 ] && rm "$OUTPUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
@@ -498,6 +498,7 @@ process() {
     fi
     info "--> Processing $ID ($SOURCEREPO) [$(date)]"
     CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
+    [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
     if [ -d "$CACHEDIR/$ID" ]; then
         cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
         info "Git updating cached clone of $SOURCEREPO..."
