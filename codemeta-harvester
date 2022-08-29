@@ -524,8 +524,9 @@ harvest_service() {
 
 get_latest_version() {
     #Finds the latest git tag or falls back to returning the git default branch (usually master or main)
-    #Assumes some kind of semantic versioning (possibly with a v prefix)
-    TAG=$(git tag -l | grep -E "^v?[0-9]+(\.[0-9])*" | sort -t. -k 1.2,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1)
+    #Assumes some kind of semantic versioning (possibly with a v prefix), also allows a one-letter suffix
+    #does not allow suffixes like -rc1  and -alpha (those are seen as pre-releases rather than full releases)
+    TAG=$(git tag -l | grep -E "^v?[0-9]+(\.[0-9])*[A-Za-z]?" | sort -t. -k 1.2,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1)
     if [ -z "$TAG" ]; then
         info "No releases found, falling back to default git branch!"
         git_default_branch
