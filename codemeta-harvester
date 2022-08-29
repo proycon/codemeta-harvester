@@ -343,7 +343,7 @@ harvest() {
             cd "$scandir" || die "Unable to enter $scandir"
             for f in README.md README.rst README README.txt README.TXT readme.txt; do
                 if [ -e "$f" ]; then
-                    info "Found README"
+                    info "Found $f"
                     echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
                     break
                 fi
@@ -353,7 +353,7 @@ harvest() {
             cd "$scandir" || die "Unable to enter $scandir"
             for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD; do
                 if [ -e "$f" ]; then
-                    info "Found buildInstructions"
+                    info "Found buildInstructions ($f)"
                     echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
                     break
                 fi
