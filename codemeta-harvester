@@ -41,6 +41,11 @@ flushlog() {
         echo "-- begin log --" >&2
         cat "$TMPLOG" >&2
         echo "-- end log --" >&2
+        if [ -n "$LOGFILE" ]; then
+            echo "-- begin log --" >> "$LOGFILE"
+            cat "$TMPLOG" >> "$LOGFILE"
+            echo "-- end log --" >> "$LOGFILE"
+        fi
         rm "$TMPLOG"
     fi
 }
