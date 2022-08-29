@@ -615,7 +615,7 @@ process() {
                 cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
             if [ $STDOUT -eq 0 ]; then
-                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1 | tee "$OUTPUTDIR/$ID.harvest.log" >&2
+                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1
             else
                 harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
             fi
@@ -630,7 +630,7 @@ process() {
     if [ -n "$SERVICE_URLS" ] && [ "$SERVICE_URLS" != "null" ]; then
         for URL in $SERVICE_URLS; do
             if [ $STDOUT -eq 0 ]; then
-                harvest_service "$ID" "$URL" 2>&1  | tee -a "$CACHEDIR/tmp/$ID.log" >&2
+                harvest_service "$ID" "$URL" 2>&1
             else
                 harvest_service "$ID" "$URL"
             fi
