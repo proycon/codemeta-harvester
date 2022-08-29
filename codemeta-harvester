@@ -270,7 +270,10 @@ harvest() {
             info "Looking for license...."
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
             if [ -n "$SPDX" ]; then
+                info "Found license $SPDX"
                 echo "{ \"license\": \"$SPDX\" }" > "$CACHEDIR/tmp/29-license.$ID.codemeta.json"
+            else
+                info "No license file found"
             fi
             flushlog
 
@@ -325,6 +328,7 @@ harvest() {
             DATE_CREATED=$(git log --date=format:"%Y-%m-%dT%TZ%z" --format="%ad" | tail -n 1)
             if [ -n "$DATE_UPDATED" ] && [ -n "$DATE_CREATED" ]; then
                 echo "{ \"dateCreated\": \"$DATE_CREATED\", \"dateModified\": \"$DATE_UPDATED\" }" > "$CACHEDIR/tmp/39-gitdate.$ID.codemeta.json"
+                info "Date created: $DATE_CREATED, date modified: $DATE_UPDATED"
             fi
 
             GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
@@ -376,6 +380,7 @@ harvest() {
                     info "Looking for repostatus information..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
+                        info "Found repostatus $REPOSTATUS"
                         echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/10-repostatus.$ID.codemeta.json"
                     fi
                     flushlog
@@ -389,6 +394,7 @@ harvest() {
                             TITLE=$(scrape_html_title "$URL")
                             [ -n "$TITLE" ] && TITLE="\"name\": \"$TITLE\","
                             echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR-documentation.$ID.codemeta.json"
+                            info "Found documentation at $URL : $TITLE"
                             SEQNR=$((SEQNR+1))
                         done
                     fi
@@ -414,7 +420,7 @@ harvest() {
 
             if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
                 #in case no version number can be found anywhere, we fall back to the git tag
-                info "Fall back to git tag if no version number is specified..."
+                info "Falling back to git tag, no version number is specified..."
                 echo "{ \"version\": \"$REF\" }" > "$CACHEDIR/tmp/99-version.$ID.codemeta.json"
             fi
             #remove the readme again if it comes from our conversion
@@ -442,6 +448,7 @@ harvest() {
                     info "Looking for repostatus information in master branch..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
+                        info "Found repostatus (master branch) $REPOSTATUS"
                         echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/10-repostatus.$ID.codemeta.json" #this overwrite the version-specific one
                     fi
                     flushlog
@@ -531,6 +538,7 @@ get_latest_version() {
         info "No releases found, falling back to default git branch!"
         git_default_branch
     else
+        info "Found release $TAG"
         echo "$TAG"
     fi
 }
