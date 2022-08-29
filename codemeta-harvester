@@ -11,6 +11,7 @@ die() {
     DEBUG=1
     flushlog
     echo "[harvester fatal error] $*">&2
+    [ -n "$LOGFILE" ] && echo "[harvester fatal error] $*" >> "$LOGFILE"
     exit 2
 }
 
@@ -20,15 +21,18 @@ error() {
     flushlog
     DEBUG=$OLDDEBUG
     echo "[harvester error] $*">&2
+    [ -n "$LOGFILE" ] && echo "[harvester error] $*" >> "$LOGFILE"
 }
 
 info() {
     echo "[harvester info] $*">&2
+    [ -n "$LOGFILE" ] && echo "[harvester info] $*" >> "$LOGFILE"
 }
 
 debug() {
     if [ "$DEBUG" -gt 0 ]; then
         echo "[harvester debug] $*">&2
+        [ -n "$LOGFILE" ] && echo "[harvester debug] $*" >> "$LOGFILE"
     fi
 }
 
@@ -565,6 +569,8 @@ process() {
     SERVICE_URLS=$(dasel --null -r yaml --plain ".services" < "$CONFIGFILE" | tr -d "[]")
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
     REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
+    LOGFILE="$OUTPUTDIR/$ID.harvest.log"
+    eche "(log file starts at $(date))" > "$LOGFILE"
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
         die "invalid configuration: $ID"
     fi
@@ -583,14 +589,16 @@ process() {
             #pull may still be needed to fast-forward local branch
             if ! git pull origin $REF; then
                 error "Failed to pull $SOURCEREPO"
+                unset -v LOGFILE
                 exit 1
             fi
             if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
                 cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
             fi
-            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1 | tee "$OUTPUTDIR/$ID.harvest.log" >&2
+            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
         else
             error "Failed to git pull $SOURCEREPO"
+            unset -v LOGFILE
             return 1
         fi
     else
@@ -613,6 +621,7 @@ process() {
             fi
         else
             error "Failed to git clone $SOURCEREPO"
+            unset -v LOGFILE
             return 1
         fi
     fi
@@ -628,8 +637,9 @@ process() {
         done
     fi
 
-    [ $STDOUT -eq 0 ] && info "Log written to $OUTPUTDIR/$ID.harvest.log"
     info "<-- Finished processing $ID ($SOURCEREPO) [$(date)]"
+    unset -v LOGFILE
+    [ $STDOUT -eq 0 ] && info "Log written to $OUTPUTDIR/$ID.harvest.log"
 }
 
 if [ $# -eq 0 ]; then
