@@ -202,7 +202,7 @@ harvest() {
             info "found codemeta for $ID"
             #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
             if dasel -n -f codemeta.json > /dev/null; then
-                cp codemeta.json "$CACHEDIR/tmp/00-jsonld.$ID.codemeta.json"
+                cp codemeta.json "$CACHEDIR/tmp/10-jsonld.$ID.codemeta.json"
                 #                               ^-- lowest number indicates highest priority
             else
                 error "codemeta.json for $ID is not well-formed"
@@ -219,7 +219,7 @@ harvest() {
                 info "found codemeta-harvest.json for $ID"
                 #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
                 if dasel -n -f codemeta-harvest.json > /dev/null; then
-                    cp codemeta-harvest.json "$CACHEDIR/tmp/00-harvest.$ID.codemeta.json"
+                    cp codemeta-harvest.json "$CACHEDIR/tmp/10-harvest.$ID.codemeta.json"
                     #                               ^-- lowest number indicates highest priority
                 else
                     error "codemeta-harvest.json for $ID is not well-formed"
@@ -231,7 +231,7 @@ harvest() {
             for f in CITATION.cff CITATION.CFF CITATION; do
                 if [ -e "$f" ]; then
                     info "found CITATION.cff for $ID, converting to codemeta"
-                    if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/10-citationcff.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
+                    if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/12-citationcff.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
                         error "CITATION.cff to codemeta conversion for $ID failed"
                         [ $STRICT -eq 1 ] && return 1
                     fi
@@ -390,7 +390,7 @@ harvest() {
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus $REPOSTATUS"
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/10-repostatus.$ID.codemeta.json"
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/11-repostatus.$ID.codemeta.json"
                     fi
                     flushlog
 
@@ -458,7 +458,7 @@ harvest() {
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus (master branch) $REPOSTATUS"
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/10-repostatus.$ID.codemeta.json" #this overwrite the version-specific one
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/05-repostatus.$ID.codemeta.json" #this overwrite the version-specific one
                     fi
                     flushlog
                 fi
@@ -467,7 +467,7 @@ harvest() {
             if [ -f MAINTAINERS ]; then
                 info "Parsing MAINTAINERS from master branch..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/30-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/05-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
                     error "Parsing MAINTAINERS file failed for $ID (codemetapy failed)"
                 fi
                 flushlog
