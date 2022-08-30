@@ -350,7 +350,7 @@ harvest() {
 
             #Add README URL
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in README.md README.rst README README.txt README.TXT readme.txt; do
+            for f in README.md README.rst README README.txt README.TXT readme.txt README.MD; do
                 if [ -e "$f" ]; then
                     info "Found $f"
                     echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
@@ -360,7 +360,7 @@ harvest() {
 
             #Add build instructions URL
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD; do
+            for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD INSTALL.MD; do
                 if [ -e "$f" ]; then
                     info "Found buildInstructions ($f)"
                     echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
@@ -383,7 +383,7 @@ harvest() {
             fi
 
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in README.md README README.TXT README.txt readme.txt; do
+            for f in README.md README README.TXT README.txt readme.txt README.MD; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
                     info "Looking for repostatus information..."
@@ -415,7 +415,7 @@ harvest() {
             #somef is optional because it relies on many dependencies that not everybody may want:
             cd "$scandir" || die "Unable to enter $scandir"
             if command -v somef 2> /dev/null >&2; then
-                for f in README.md README README.TXT README.txt readme.txt;  do
+                for f in README.md README README.TXT README.txt readme.txt README.MD; do
                     if [ -e "$f" ]; then
                         info "Analyzing README..."
                         if ! somef describe -c "$CACHEDIR/tmp/40-somef.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
@@ -451,7 +451,7 @@ harvest() {
             oldcwd="$(pwd)"
             cd "$scandir" || die "Unable to enter $scandir"
             git checkout "$DEFAULT_BRANCH" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
-            for f in README.md README README.TXT README.txt readme.txt; do
+            for f in README.md README README.TXT README.txt readme.txt README.MD; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
                     info "Looking for repostatus information in master branch..."
