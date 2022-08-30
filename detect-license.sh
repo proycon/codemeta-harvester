@@ -14,7 +14,7 @@ for file in README.md README.MD README.rst README README.txt README.TXT; do
     fi
 done
 
-for file in LICENSE LICENSE.md COPYING COPYRIGHT; do
+for file in LICENSE LICENSE.md LICENSE.txt COPYING COPYRIGHT LICENCE LICENCE.md LICENCE.txt; do
     [ -e "$file" ] || continue;
     echo "Trying $file ...">&2
     TEXT=$(head -n 10 "$file" | tr "[:lower:]" "[:upper:]")
