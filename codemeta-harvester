@@ -393,11 +393,20 @@ harvest() {
             for f in README.md README README.TXT README.txt readme.txt README.MD; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
-                    info "Looking for repostatus information..."
+                    info "Looking for repostatus information in README..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus $REPOSTATUS"
                         echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/11-repostatus.$ID.codemeta.json"
+                    fi
+                    flushlog
+
+                    #Detect contIntegration 
+                    info "Looking for continuous integration information in README..."
+                    CI=$("$SCRIPTDIR/detect-ci.sh" < "$f" 2> "$TMPLOG" | head -n 1)
+                    if [ -n "$CI" ]; then
+                        info "Found CI $CI"
+                        echo "{ \"contIntegration\": \"$CI\" }" > "$CACHEDIR/tmp/12-ci.$ID.codemeta.json"
                     fi
                     flushlog
 
