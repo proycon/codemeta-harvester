@@ -341,12 +341,19 @@ harvest() {
             fi
 
             GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
-            info "Querying Github/GitLab API ($GIT_REMOTE_URL)"
-            #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
-            if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-gitapi.$ID.codemeta.json" -i gitapi "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
-                error "conversion from Github/GitLab API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
-            fi
-            flushlog
+            case "$GIT_REMOTE_URL" in 
+                *bitbucket*|*git.sr.ht*|*codeberg.org)
+                    info "Not querying API for $GIT_REMOTE_URL (no implementation)"
+                    ;;
+                *)
+                    info "Querying Github/GitLab API ($GIT_REMOTE_URL)"
+                    #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
+                    if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/40-gitapi.$ID.codemeta.json" -i gitapi "$GIT_REMOTE_URL" 2> "$TMPLOG" >&2; then
+                        error "conversion from Github/GitLab API query failed for $ID ($GIT_REMOTE_URL) (codemetapy failed)"
+                    fi
+                    flushlog
+                    ;;
+            esac
 
             #Add README URL
             cd "$scandir" || die "Unable to enter $scandir"
