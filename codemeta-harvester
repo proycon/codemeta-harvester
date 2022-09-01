@@ -594,7 +594,7 @@ process() {
         [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
         #create a dummy SoftwareSourceCode entry (with no actual codeRepository)
         info "Creating dummy codemeta.json for orphan service: codemetapy $CODEMETAPY_RECONCILE_ARGS /dev/null > $OUTPUTDIR/$ID.codemeta.json"
-        codemetapy $CODEMETAPY_RECONCILE_ARGS /dev/null > "$OUTPUTDIR/$ID.codemeta.json"  || error "Failed to create dummy codemeta.json for $ID"
+        codemetapy $CODEMETAPY_RECONCILE_ARGS /dev/null > "$OUTPUTDIR/$ID.codemeta.json" 2> "$TMPLOG" || error "Failed to create dummy codemeta.json for $ID"
     else
         #normal behaviour: source repo defined
         info "--> Processing $ID ($SOURCEREPO) [$(date)]"
