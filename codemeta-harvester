@@ -66,7 +66,7 @@ usage() {
     echo "  --debug             Output all logs"
     echo "  --keep              Keep intermediate output (in cachedir), don't clean up (useful for debugging)"
     echo "  --strict            Fail a conversion if one of it's main components fails"
-    echo "  --stdout            Don't write files but output to stdout"
+    echo "  --stdout            Output to stdout (and don't keep output files)"
     echo "  --validate [file]   SHACL file to validate all metadata against"
     echo "  --validatetext      Header text for validation reports"
     echo "  --version           Output version"
@@ -138,6 +138,9 @@ while :; do
             ;;
         --stdout)
             STDOUT=1
+            if [ "$OUTPUTDIR" = "$(realpath .)" ]; then
+                OUTPUTDIR=$TMPDIR
+            fi
             ;;
         --opts)
             [ -n "$2" ] || die "Expected value for --opts"
@@ -514,11 +517,7 @@ harvest() {
 
     #Last we reconciliate all metadata using codemetapy
     #this is done in increasing order of priority, where higher priority items (lower number) replace earlier lower priority ones
-    if [ $STDOUT -eq 0 ]; then
-        OUT_ARG="-O $OUTPUTDIR/$ID.codemeta.json"
-    else
-        OUT_ARG=""
-    fi
+    OUT_ARG="-O $OUTPUTDIR/$ID.codemeta.json"
     info "Reconciliating: codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS --enrich --textv \"$VALIDATETEXT\" $OUT_ARG $files"
     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_*ARGS)
     if ! codemetapy $CODEMETAPY_ARGS $CODEMETAPY_RECONCILE_ARGS --enrich --textv "$VALIDATETEXT" $OUT_ARG $files 2> "$TMPLOG" >&2; then
@@ -538,11 +537,6 @@ harvest_service() {
     ID="$1"
     URL="$2"
     info "Harvesting remote service URL $URL for $ID: codemetapy $CODEMETAPY_ARGS -O \"$CACHEDIR/tmp/$ID.codemeta.json\" \"$OUTPUTDIR/$ID.codemeta.json\" \"$URL\""
-    if [ $STDOUT -eq 0 ]; then
-        OUT_ARG="-O $OUTPUTDIR/$ID.codemeta.json"
-    else
-        OUT_ARG=""
-    fi
     #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
     if codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/$ID.codemeta.json" "$OUTPUTDIR/$ID.codemeta.json" "$URL" 2> "$TMPLOG" >&2; then
         flushlog
@@ -598,13 +592,9 @@ process() {
         info "--> Processing orphan service $ID [$(date)]"
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\""
         [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
-        if [ $STDOUT -eq 0 ]; then
-            OUT_ARG="-O $OUTPUTDIR/$ID.codemeta.json"
-        else
-            OUT_ARG=""
-        fi
         #create a dummy SoftwareSourceCode entry (with no actual codeRepository)
-        codemetapy $CODEMETAPY_RECONCILE_ARGS /dev/null > "$OUT_ARG"
+        info "Creating dummy codemeta.json for orphan service: codemetapy $CODEMETAPY_RECONCILE_ARGS -O $OUTPUTDIR/$ID.codemeta.json /dev/null > \"$OUT_ARG\""
+        codemetapy $CODEMETAPY_RECONCILE_ARGS -O "$OUTPUTDIR/$ID.codemeta.json" /dev/null > "$OUT_ARG" || error "Failed to create dummy codemeta.json for $ID"
     else
         #normal behaviour: source repo defined
         info "--> Processing $ID ($SOURCEREPO) [$(date)]"
@@ -647,11 +637,7 @@ process() {
                 if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                     cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
                 fi
-                if [ $STDOUT -eq 0 ]; then
-                    harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1
-                else
-                    harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
-                fi
+                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
             else
                 error "Failed to git clone $SOURCEREPO"
                 unset -v LOGFILE
@@ -663,17 +649,18 @@ process() {
     #Process services
     if [ -n "$SERVICE_URLS" ] && [ "$SERVICE_URLS" != "null" ]; then
         for URL in $SERVICE_URLS; do
-            if [ $STDOUT -eq 0 ]; then
-                harvest_service "$ID" "$URL" 2>&1
-            else
-                harvest_service "$ID" "$URL"
-            fi
+            harvest_service "$ID" "$URL"
         done
     fi
 
     info "<-- Finished processing $ID ($SOURCEREPO) [$(date)]"
     unset -v LOGFILE
-    [ $STDOUT -eq 0 ] && info "Log written to $OUTPUTDIR/$ID.harvest.log"
+    if [ $STDOUT -eq 0 ]; then
+        info "Log written to $OUTPUTDIR/$ID.harvest.log"
+    else
+        cat "$OUTPUTDIR/$ID.codemeta.json"
+        rm "$OUTPUTDIR/$ID.codemeta.json"
+    fi
 }
 
 if [ $# -eq 0 ]; then
