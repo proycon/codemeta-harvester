@@ -593,57 +593,70 @@ process() {
     LOGFILE="$OUTPUTDIR/$ID.harvest.log"
     echo "(log file starts at $(date))" > "$LOGFILE"
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
-        die "invalid configuration: $ID"
-    fi
-    info "--> Processing $ID ($SOURCEREPO) [$(date)]"
-    CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
-    [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
-    if [ -d "$CACHEDIR/$ID" ]; then
-        cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
-        info "Git updating cached clone of $SOURCEREPO..."
-        if git fetch origin --tags 2> "$TMPLOG" >&2; then
-            if [ -z "$REF" ] || [ "$REF" = "null" ]; then
-                REF=$(get_latest_version)
-            fi
-            info "Using $REF"
-            git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
-            #pull may still be needed to fast-forward local branch
-            if ! git pull origin $REF; then
-                error "Failed to pull $SOURCEREPO"
-                unset -v LOGFILE
-                exit 1
-            fi
-            if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
-                cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
-            fi
-            harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+        #no source repo defined: service is an 'orphan'
+        [ -n "$SERVICE_URLS" ] || die "invalid configuration: $ID"
+        info "--> Processing orphan service $ID [$(date)]"
+        CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\""
+        [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
+        if [ $STDOUT -eq 0 ]; then
+            OUT_ARG="-O $OUTPUTDIR/$ID.codemeta.json"
         else
-            error "Failed to git pull $SOURCEREPO"
-            unset -v LOGFILE
-            return 1
+            OUT_ARG=""
         fi
+        #create a dummy SoftwareSourceCode entry (with no actual codeRepository)
+        codemetapy $CODEMETAPY_RECONCILE_ARGS /dev/null > "$OUT_ARG"
     else
-        cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
-        info "Git light cloning $SOURCEREPO..."
-        if git clone --filter=blob:limit=999k "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
-            cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
-            if [ -z "$REF" ] || [ "$REF" = "null" ]; then
-                REF=$(get_latest_version)
-            fi
-            info "Using $REF for $ID"
-            git -c advice.detachedHead=false checkout -f "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
-            if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
-                cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
-            fi
-            if [ $STDOUT -eq 0 ]; then
-                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1
-            else
+        #normal behaviour: source repo defined
+        info "--> Processing $ID ($SOURCEREPO) [$(date)]"
+        CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
+        [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
+        if [ -d "$CACHEDIR/$ID" ]; then
+            cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
+            info "Git updating cached clone of $SOURCEREPO..."
+            if git fetch origin --tags 2> "$TMPLOG" >&2; then
+                if [ -z "$REF" ] || [ "$REF" = "null" ]; then
+                    REF=$(get_latest_version)
+                fi
+                info "Using $REF"
+                git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+                #pull may still be needed to fast-forward local branch
+                if ! git pull origin $REF; then
+                    error "Failed to pull $SOURCEREPO"
+                    unset -v LOGFILE
+                    exit 1
+                fi
+                if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
+                    cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
+                fi
                 harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+            else
+                error "Failed to git pull $SOURCEREPO"
+                unset -v LOGFILE
+                return 1
             fi
         else
-            error "Failed to git clone $SOURCEREPO"
-            unset -v LOGFILE
-            return 1
+            cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
+            info "Git light cloning $SOURCEREPO..."
+            if git clone --filter=blob:limit=999k "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
+                cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
+                if [ -z "$REF" ] || [ "$REF" = "null" ]; then
+                    REF=$(get_latest_version)
+                fi
+                info "Using $REF for $ID"
+                git -c advice.detachedHead=false checkout -f "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+                if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
+                    cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
+                fi
+                if [ $STDOUT -eq 0 ]; then
+                    harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" 2>&1
+                else
+                    harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+                fi
+            else
+                error "Failed to git clone $SOURCEREPO"
+                unset -v LOGFILE
+                return 1
+            fi
         fi
     fi
 
