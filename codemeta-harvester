@@ -3,7 +3,7 @@
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 #Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
-VERSION="0.2.2" #also update in codemeta.json
+VERSION="0.2.3" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
