@@ -3,7 +3,7 @@
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 #Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
-VERSION="0.2.1" #also update in codemeta.json
+VERSION="0.2.2" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
@@ -165,7 +165,7 @@ while :; do
             die "Unknown option: $1"
             ;;
         *)
-            [ ! -e "$1" ] && die "Expected configuration file/directory, got invalid file/directory '$1'"
+            [ -n "$1" ] && [ ! -e "$1" ] && die "Expected configuration file/directory, got invalid file/directory '$1'"
             break
     esac
 
@@ -695,14 +695,20 @@ if [ $# -eq 0 ]; then
     fi
 else
     #configuration files/directory provided, process them
-    WORKDIR=$(pwd)
+    WORKDIR="$(pwd)"
+    FOUND=0
+    if [ -n "$VALIDATE" ]; then
+        CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
+    fi
     for TARGET in "$@"; do
         if [ -f "$TARGET" ]; then
             process "$TARGET"
+            FOUND=1
         elif [ -d "$TARGET" ]; then
             for SUBTARGET in "$TARGET"/*.yml; do
                 [ -e "$SUBTARGET" ] && process "$SUBTARGET"
             done
         fi
     done
+    [ $FOUND -eq 0 ] && die "No *.yml configuration files for the harvester. Just want to run without configuration on the current working directory? Then leave out the positional parameter"
 fi
