@@ -706,7 +706,10 @@ else
             FOUND=1
         elif [ -d "$TARGET" ]; then
             for SUBTARGET in "$TARGET"/*.yml; do
-                [ -e "$SUBTARGET" ] && process "$SUBTARGET"
+                if [ -e "$SUBTARGET" ]; then
+                    process "$SUBTARGET"
+                    FOUND=1
+                fi
             done
         fi
     done
