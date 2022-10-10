@@ -404,6 +404,21 @@ harvest() {
                     fi
                     flushlog
 
+                    #Detect TRL via badges
+                    info "Looking for TRL information in README..."
+                    TRL=$("$SCRIPTDIR/detect-trl.sh" < "$f" 2> "$TMPLOG" | head -n 1)
+                    if [ -n "$TRL" ]; then
+                        info "Found TRL $TRL"
+                        echo "{ \"technologyReadinessLevel\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                    elif [ "$REPOSTATUS" = "https://www.repostatus.org/#concept" ]; then
+                        info "Mapping repostatus $REPOSTATUS to trl:Stage2Concept"
+                        echo "{ \"technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage2Concept\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                    elif [ "$REPOSTATUS" = "https://www.repostatus.org/#wip" ]; then
+                        info "Mapping repostatus $REPOSTATUS to trl:Stage3Experimental"
+                        echo "{ \"technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage3Experimental\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                    fi
+                    flushlog
+
                     #Detect contIntegration 
                     info "Looking for continuous integration information in README..."
                     CI=$("$SCRIPTDIR/detect-ci.sh" < "$f" 2> "$TMPLOG" | head -n 1)
