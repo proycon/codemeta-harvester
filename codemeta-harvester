@@ -470,14 +470,18 @@ harvest() {
             oldcwd="$(pwd)"
             cd "$scandir" || die "Unable to enter $scandir"
             git checkout "$DEFAULT_BRANCH" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
+        else
+            CURRENT_BRANCH=
+        fi
 
-            info "Inferring repostatus information from git activity (used only as a fallback if not explicitly provided)..."
-            REPOSTATUS=$("$SCRIPTDIR/detect-repostatus-from-git.sh" 2> "$TMPLOG" | head -n 1)
-            if [ -n "$REPOSTATUS" ]; then
-                info "Inferred repostatus $REPOSTATUS"
-                echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/99-repostatus.$ID.codemeta.json"
-            fi
+        info "Inferring repostatus information from git activity (used only as a fallback if not explicitly provided)..."
+        REPOSTATUS=$("$SCRIPTDIR/detect-repostatus-from-git.sh" 2> "$TMPLOG" | head -n 1)
+        if [ -n "$REPOSTATUS" ]; then
+            info "Inferred repostatus $REPOSTATUS"
+            echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/99-repostatus.$ID.codemeta.json"
+        fi
 
+        if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
             for f in README.md README README.TXT README.txt readme.txt README.MD; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
@@ -499,7 +503,9 @@ harvest() {
                 fi
                 flushlog
             fi
+        fi
 
+        if [ -n "$CURRENT_BRANCH" ]; then
             git checkout "$CURRENT_BRANCH" || die "Unable to switch to previous git branch"
             cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
