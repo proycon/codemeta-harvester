@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
-#Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
+#Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD ReadMe.md readme.md README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
 VERSION="0.2.3" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
@@ -360,7 +360,7 @@ harvest() {
 
             #Add README URL
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in README.md README.rst README README.txt README.TXT readme.txt README.MD; do
+            for f in README.md README.rst README README.txt README.TXT readme.txt README.MD ReadMe.md readme.md; do
                 if [ -e "$f" ]; then
                     info "Found $f"
                     echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
@@ -393,7 +393,7 @@ harvest() {
             fi
 
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in README.md README README.TXT README.txt readme.txt README.MD; do
+            for f in README.md README README.TXT README.txt readme.txt README.MD ReadMe.md readme.md; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
                     info "Looking for repostatus information in README..."
@@ -449,7 +449,7 @@ harvest() {
             #somef is optional because it relies on many dependencies that not everybody may want:
             cd "$scandir" || die "Unable to enter $scandir"
             if command -v somef 2> /dev/null >&2; then
-                for f in README.md README README.TXT README.txt readme.txt README.MD; do
+                for f in README.md README README.TXT README.txt readme.txt README.MD ReadMe.md readme.md; do
                     if [ -e "$f" ]; then
                         info "Analyzing README..."
                         if ! somef describe -c "$CACHEDIR/tmp/40-somef.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
@@ -497,7 +497,7 @@ harvest() {
         fi
 
         if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
-            for f in README.md README README.TXT README.txt readme.txt README.MD; do
+            for f in README.md README README.TXT README.txt readme.txt README.MD ReadMe.md readme.md; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
                     info "Looking for repostatus information in master branch..."
