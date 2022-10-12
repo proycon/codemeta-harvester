@@ -496,7 +496,7 @@ harvest() {
 
         info "Inferring repostatus information from git activity (used only as a fallback if not explicitly provided)..."
         DETECTED_VERSION=
-        for f in $(ls "$CACHEDIR/tmp/*.$ID.codemeta.json" | sort); do
+        for f in $(find "$CACHEDIR/tmp/" -maxdepth 1 -name "*.$ID.codemeta.json" | sort); do
             DETECTED_VERSION=$(dasel -f "$f" -s .version | tr -d '"')
             [ -n "$DETECTED_VERSION" ] && break
         done
