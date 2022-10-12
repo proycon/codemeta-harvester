@@ -198,6 +198,7 @@ harvest() {
 
         CLEAN_README=0
 
+
         #First we grab all possible metadata and store it in the tmp dir
         if [ -e codemeta.json ] && [ $IGNORE -eq 0 ]; then
             #If there is an explicit codemeta.json, we will forego on all other detection methods
@@ -490,7 +491,12 @@ harvest() {
         fi
 
         info "Inferring repostatus information from git activity (used only as a fallback if not explicitly provided)..."
-        REPOSTATUS=$("$SCRIPTDIR/detect-repostatus-from-git.sh" 2> "$TMPLOG" | head -n 1)
+        DETECTED_VERSION=
+        for f in $(ls "$CACHEDIR/tmp/*.$ID.codemeta.json" | sort); do
+            DETECTED_VERSION=$(dasel -f "$f" -s .version | tr -d '"')
+            [ -n "$DETECTED_VERSION" ] && break
+        done
+        REPOSTATUS=$("$SCRIPTDIR/detect-repostatus-from-git.sh" "$DETECTED_VERSION" 2> "$TMPLOG" | head -n 1)
         if [ -n "$REPOSTATUS" ]; then
             info "Inferred repostatus $REPOSTATUS"
             echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/99-repostatus.$ID.codemeta.json"
