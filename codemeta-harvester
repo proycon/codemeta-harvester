@@ -485,7 +485,11 @@ harvest() {
             DEFAULT_BRANCH=$(git_default_branch)
             oldcwd="$(pwd)"
             cd "$scandir" || die "Unable to enter $scandir"
-            git checkout "$DEFAULT_BRANCH" 2> "$TMPLOG" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
+            if ! git checkout "$DEFAULT_BRANCH" 2> "$TMPLOG"; then
+                #fallback, stash and retry:
+                git stash 2>> "$TMPLOG"
+                git checkout "$DEFAULT_BRANCH" 2>> "$TMPLOG" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
+            fi
         else
             CURRENT_BRANCH=
         fi
