@@ -487,7 +487,7 @@ harvest() {
             cd "$scandir" || die "Unable to enter $scandir"
             if ! git checkout "$DEFAULT_BRANCH" 2> "$TMPLOG"; then
                 #fallback, stash and retry:
-                git stash 2>> "$TMPLOG"
+                git stash -u 2>> "$TMPLOG"
                 git checkout "$DEFAULT_BRANCH" 2>> "$TMPLOG" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
             fi
         else
@@ -531,7 +531,11 @@ harvest() {
         fi
 
         if [ -n "$CURRENT_BRANCH" ]; then
-            git checkout "$CURRENT_BRANCH" 2> "$TMPLOG" || die "Unable to switch to previous git branch"
+            if ! git checkout "$CURRENT_BRANCH" 2> "$TMPLOG"; 
+                #fallback, stash and retry
+                git stash -u 2>> "$TMPLOG"
+                git checkout "$CURRENT_BRANCH" || die "Unable to switch to previous git branch"
+            fi
             cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
     done
@@ -647,7 +651,10 @@ process() {
                     REF=$(get_latest_version)
                 fi
                 info "Using $REF"
-                git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+                if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
+                    git stash -u 2>> "$TMPLOG"
+                    git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG" || die "Invalid git ref '$REF' or unclean working dir"
+                fi
                 #pull may still be needed to fast-forward local branch
                 if ! git pull origin $REF; then
                     error "Failed to pull $SOURCEREPO"
@@ -672,7 +679,10 @@ process() {
                     REF=$(get_latest_version)
                 fi
                 info "Using $REF for $ID"
-                git -c advice.detachedHead=false checkout -f "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+                if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
+                    git stash -u 2>> "$TMPLOG"
+                    git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG" || die "Invalid git ref '$REF' or unclean working dir"
+                fi
                 if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                     cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
                 fi
