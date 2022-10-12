@@ -531,7 +531,7 @@ harvest() {
         fi
 
         if [ -n "$CURRENT_BRANCH" ]; then
-            if ! git checkout "$CURRENT_BRANCH" 2> "$TMPLOG"; 
+            if ! git checkout "$CURRENT_BRANCH" 2> "$TMPLOG"; then
                 #fallback, stash and retry
                 git stash -u 2>> "$TMPLOG"
                 git checkout "$CURRENT_BRANCH" || die "Unable to switch to previous git branch"
