@@ -344,7 +344,8 @@ harvest() {
                 info "Date created: $DATE_CREATED, date modified: $DATE_UPDATED"
             fi
 
-            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
+            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|:([A-Za-z])|/\1|" | sed "s|\.git$||")
+            #                                                                          ^-- github.com:proycon -> github.com/proycon (but ensure we don't mismatch on host:port)
             case "$GIT_REMOTE_URL" in 
                 *bitbucket*|*git.sr.ht*|*codeberg.org)
                     info "Not querying API for $GIT_REMOTE_URL (no implementation)"
