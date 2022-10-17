@@ -21,12 +21,11 @@ def process_linguist(lg_json_path: Path, save_path='linguist.codemeta.json'):
     :param save_path: _description_, defaults to 'codemeta-linguist.json'
     :type save_path: str, optional
     """
-    print(lg_json_path)
     with open(lg_json_path, 'r') as fileo:
         lg_json = json.load(fileo)
 
     code_meta_keys, additional_metadata = parse_json_linguist(lg_json=lg_json)
-
+    
     with open(save_path, 'w') as fileo:
         json.dump(code_meta_keys, fileo)
 
@@ -73,16 +72,16 @@ def parse_json_linguist(lg_json: dict, repo_path: Path='.') -> Tuple[dict, dict]
             ext = os.path.splitext(fil)[1]
             if len(ext) > 0:
                 fileends.append(ext)
-
+    total_size = int(total_size / 1024.0) # byte to KB
     code_meta_keys =  {"programmingLanguage" : langs,
      "fileFormat" : list(set(file_formats)), # mime type
-     "fileSize" : f"{total_size}"}
+     "fileSize" : f"{total_size}KB"}
     
     additional_metadata =  {
        "programmingLanguagePercentageSize" : lang_percent,
        "fileFormat" : list(set(file_formats)), # mime type
        "fileEndings" : list(set(fileends)),
-       "fileSize" : f"{total_size}"}
+       "fileSize" : f"{total_size}KB"}
     
     return code_meta_keys, additional_metadata
     
