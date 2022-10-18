@@ -390,6 +390,21 @@ harvest() {
             fi
             #fi
 
+            ##Query DOI via Zenodo API, retrieves the DOI specific to this version
+            if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                info "Querying Zenodo DOI..."
+                if [ -n "$ZENODO_ACCESS_TOKEN" ]; then
+                    Q="?access_token=$ZENODO_ACCESS_TOKEN&"
+                else
+                    Q="?"
+                fi
+                DOI=$(curl "https://zenodo.org/api/records/${Q}q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -p json -s ".hits.hits.[0].links.doi" | tr -d '"')
+                if [ -n "$DOI" ]; then
+                    info "Found DOI $DOI"
+                    echo "{ \"identifier\": { \"@type\": \"PropertyValue\",\"propertyID\":\"doi\", \"value\": \"$DOI\" } }"  > "$CACHEDIR/tmp/23-doi.$ID.codemeta.json"
+                fi
+            fi
+
             cd "$scandir" || die "Unable to enter $scandir"
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
@@ -432,6 +447,7 @@ harvest() {
                         echo "{ \"contIntegration\": \"$CI\" }" > "$CACHEDIR/tmp/12-ci.$ID.codemeta.json"
                     fi
                     flushlog
+
 
                     #Detect links to documentation
                     info "Looking for documentation links in README..."
