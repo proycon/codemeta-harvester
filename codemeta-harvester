@@ -7,6 +7,9 @@ VERSION="0.2.4" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
+#variants of README.md
+README="README.md README.rst README README.txt README.TXT README.MD readme readme.txt readme.md ReadMe.md ReadMe.txt ReadMe"
+
 die() {
     DEBUG=1
     flushlog
@@ -198,6 +201,7 @@ harvest() {
 
         CLEAN_README=0
 
+
         #First we grab all possible metadata and store it in the tmp dir
         if [ -e codemeta.json ] && [ $IGNORE -eq 0 ]; then
             #If there is an explicit codemeta.json, we will forego on all other detection methods
@@ -343,7 +347,8 @@ harvest() {
                 info "Date created: $DATE_CREATED, date modified: $DATE_UPDATED"
             fi
 
-            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|\.git$||")
+            GIT_REMOTE_URL=$(git remote get-url origin | sed 's|git@|https://|' | sed "s|:([A-Za-z])|/\1|" | sed "s|\.git$||")
+            #                                                                          ^-- github.com:proycon -> github.com/proycon (but ensure we don't mismatch on host:port)
             case "$GIT_REMOTE_URL" in 
                 *bitbucket*|*git.sr.ht*|*codeberg.org)
                     info "Not querying API for $GIT_REMOTE_URL (no implementation)"
@@ -360,7 +365,7 @@ harvest() {
 
             #Add README URL
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in README.md README.rst README README.txt README.TXT readme.txt README.MD ReadMe.md readme.md; do
+            for f in $README; do
                 if [ -e "$f" ]; then
                     info "Found $f"
                     echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
@@ -393,7 +398,7 @@ harvest() {
             fi
 
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in README.md README README.TXT README.txt readme.txt README.MD ReadMe.md readme.md; do
+            for f in $README; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
                     info "Looking for repostatus information in README..."
@@ -449,7 +454,7 @@ harvest() {
             #somef is optional because it relies on many dependencies that not everybody may want:
             cd "$scandir" || die "Unable to enter $scandir"
             if command -v somef 2> /dev/null >&2; then
-                for f in README.md README README.TXT README.txt readme.txt README.MD ReadMe.md readme.md; do
+                for f in $README; do
                     if [ -e "$f" ]; then
                         info "Analyzing README..."
                         if ! somef describe -c "$CACHEDIR/tmp/40-somef.$ID.codemeta.json" -d "$f" 2> "$TMPLOG" >&2; then
@@ -484,20 +489,29 @@ harvest() {
             DEFAULT_BRANCH=$(git_default_branch)
             oldcwd="$(pwd)"
             cd "$scandir" || die "Unable to enter $scandir"
-            git checkout "$DEFAULT_BRANCH" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
+            if ! git checkout "$DEFAULT_BRANCH" 2> "$TMPLOG"; then
+                #fallback, stash and retry:
+                git stash -u 2>> "$TMPLOG"
+                git checkout "$DEFAULT_BRANCH" 2>> "$TMPLOG" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
+            fi
         else
             CURRENT_BRANCH=
         fi
 
         info "Inferring repostatus information from git activity (used only as a fallback if not explicitly provided)..."
-        REPOSTATUS=$("$SCRIPTDIR/detect-repostatus-from-git.sh" 2> "$TMPLOG" | head -n 1)
+        DETECTED_VERSION=
+        for f in $(find "$CACHEDIR/tmp/" -maxdepth 1 -name "*.$ID.codemeta.json" | sort); do
+            DETECTED_VERSION=$(dasel -f "$f" -s .version 2> /dev/null | tr -d '"')
+            [ -n "$DETECTED_VERSION" ] && break
+        done
+        REPOSTATUS=$("$SCRIPTDIR/detect-repostatus-from-git.sh" "$DETECTED_VERSION" 2> "$TMPLOG" | head -n 1)
         if [ -n "$REPOSTATUS" ]; then
             info "Inferred repostatus $REPOSTATUS"
             echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/99-repostatus.$ID.codemeta.json"
         fi
 
         if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
-            for f in README.md README README.TXT README.txt readme.txt README.MD ReadMe.md readme.md; do
+            for f in $README; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
                     info "Looking for repostatus information in master branch..."
@@ -524,7 +538,11 @@ harvest() {
         fi
 
         if [ -n "$CURRENT_BRANCH" ]; then
-            git checkout "$CURRENT_BRANCH" || die "Unable to switch to previous git branch"
+            if ! git checkout "$CURRENT_BRANCH" 2> "$TMPLOG"; then
+                #fallback, stash and retry
+                git stash -u 2>> "$TMPLOG"
+                git checkout "$CURRENT_BRANCH" || die "Unable to switch to previous git branch"
+            fi
             cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
     done
@@ -646,7 +664,10 @@ process() {
                     REF=$(get_latest_version)
                 fi
                 info "Using $REF"
-                git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+                if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
+                    git stash -u 2>> "$TMPLOG"
+                    git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG" || die "Invalid git ref '$REF' or unclean working dir"
+                fi
                 #pull may still be needed to fast-forward local branch
                 if ! git pull origin $REF; then
                     error "Failed to pull $SOURCEREPO"
@@ -671,7 +692,10 @@ process() {
                     REF=$(get_latest_version)
                 fi
                 info "Using $REF for $ID"
-                git -c advice.detachedHead=false checkout -f "$REF"  2> "$TMPLOG" >&2 || die "Invalid git ref '$REF' or unclean working dir"
+                if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
+                    git stash -u 2>> "$TMPLOG"
+                    git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG" || die "Invalid git ref '$REF' or unclean working dir"
+                fi
                 if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                     cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
                 fi
