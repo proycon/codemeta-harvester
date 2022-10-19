@@ -401,7 +401,8 @@ harvest() {
                 DOI=$(curl "https://zenodo.org/api/records/${Q}q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -p json -s ".hits.hits.[0].links.doi" | tr -d '"')
                 if [ -n "$DOI" ]; then
                     info "Found DOI $DOI"
-                    echo "{ \"identifier\": { \"@type\": \"PropertyValue\",\"propertyID\":\"doi\", \"value\": \"$DOI\" } }"  > "$CACHEDIR/tmp/23-doi.$ID.codemeta.json"
+                    #takes precendence over codemeta.json (because it's impossible to include a codemeta.json with a DOI in a version tagged repo)
+                    echo "{ \"identifier\": [ \"$IDENTIFIER\", { \"@type\": \"PropertyValue\",\"propertyID\":\"doi\", \"value\": \"$DOI\" } ] }"  > "$CACHEDIR/tmp/05-doi.$ID.codemeta.json" 
                 fi
             fi
 
@@ -415,27 +416,29 @@ harvest() {
             cd "$scandir" || die "Unable to enter $scandir"
             for f in $README; do
                 if [ -e "$f" ]; then
-                    #Detect developmentStatus via repostatus badges
-                    info "Looking for repostatus information in README..."
-                    REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
-                    if [ -n "$REPOSTATUS" ]; then
-                        info "Found repostatus $REPOSTATUS"
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/11-repostatus.$ID.codemeta.json"
-                    fi
-                    flushlog
 
                     #Detect TRL via badges
                     info "Looking for TRL information in README..."
                     TRL=$("$SCRIPTDIR/detect-trl.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$TRL" ]; then
                         info "Found TRL $TRL"
-                        echo "{ \"technologyReadinessLevel\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                        #(note: codemetapy will rewrite technologyReadinessLevel to codemeta:developmentStatus in a final reconciliation step)
+                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
                     elif [ "$REPOSTATUS" = "https://www.repostatus.org/#concept" ]; then
                         info "Mapping repostatus $REPOSTATUS to trl:Stage2Concept"
-                        echo "{ \"technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage2Concept\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage2Concept\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
                     elif [ "$REPOSTATUS" = "https://www.repostatus.org/#wip" ]; then
                         info "Mapping repostatus $REPOSTATUS to trl:Stage3Experimental"
-                        echo "{ \"technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage3Experimental\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage3Experimental\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                    fi
+                    flushlog
+
+                    #Detect developmentStatus via repostatus badges
+                    info "Looking for repostatus information in README..."
+                    REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
+                    if [ -n "$REPOSTATUS" ]; then
+                        info "Found repostatus $REPOSTATUS"
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/11-repostatus.$ID.codemeta.json"
                     fi
                     flushlog
 
@@ -451,16 +454,19 @@ harvest() {
 
                     #Detect links to documentation
                     info "Looking for documentation links in README..."
-                    SEQNR=50
                     URLS=$("$SCRIPTDIR/detect-documentation.sh" < "$f" 2> "$TMPLOG")
                     if [ -n "$URLS" ]; then
+                        echo "{ \"softwareHelp\": [" > "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
+                        COUNT=0
                         for URL in $URLS; do
                             TITLE=$(scrape_html_title "$URL")
                             [ -n "$TITLE" ] && TITLE="\"name\": \"$TITLE\","
-                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR-documentation.$ID.codemeta.json"
                             info "Found documentation at $URL : $TITLE"
-                            SEQNR=$((SEQNR+1))
+                            [ $COUNT -gt 0 ] && echo "," >>  "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
+                            echo "{ \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" }" >>  "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
+                            COUNT=$((COUNT+1))
                         done
+                        echo "]}" >> "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
                     fi
                     flushlog
                     break
@@ -534,13 +540,14 @@ harvest() {
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus (master branch) $REPOSTATUS"
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/05-repostatus.$ID.codemeta.json" #this overwrite the version-specific one
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/05-repostatus.$ID.codemeta.json" #this overwrite the version-specific one and takes precendence even over codemeta.json!
                     fi
                     flushlog
                 fi
             done
 
             if [ -f MAINTAINERS ]; then
+                #takes precendence even over codemeta.json!
                 info "Parsing MAINTAINERS from master branch..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/05-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
