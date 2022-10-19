@@ -595,7 +595,10 @@ harvest() {
         [ $STDOUT -eq 0 ] && rm "$OUTPUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
     else
+        OLD_DEBUG=$DEBUG
+        DEBUG=1 #force log output for reconciliation step
         flushlog
+        DEBUG=$OLD_DEBUG
         [ $STDOUT -eq 0 ] && info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
     [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
