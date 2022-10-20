@@ -191,6 +191,7 @@ harvest() {
         CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --released"
     fi
     SCANDIRS="$4 ."
+    info "Git reference: $REF"
     #ensure there is nothing left from previous runs (might happen if one was run with --keep)
     rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
     for scandir in $SCANDIRS; do
@@ -392,10 +393,11 @@ harvest() {
 
             ##Query DOI via Zenodo API, retrieves the DOI specific to this version
             if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
-                info "Querying Zenodo DOI..."
                 if [ -n "$ZENODO_ACCESS_TOKEN" ]; then
+                    info "Querying Zenodo API for DOI (access token provided)..."
                     Q="?access_token=$ZENODO_ACCESS_TOKEN&"
                 else
+                    info "Querying Zenodo API for DOI (no access token provided)..."
                     Q="?"
                 fi
                 DOI=$(curl "https://zenodo.org/api/records/${Q}q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -p json -s ".hits.hits.[0].links.doi" | tr -d '"')
