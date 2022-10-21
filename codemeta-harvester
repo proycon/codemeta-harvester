@@ -217,6 +217,10 @@ harvest() {
                 error "codemeta.json for $ID is not well-formed"
                 [ $STRICT -eq 1 ] && return 1
             fi
+            [ -e codemeta-harvest.json ] && info "Your codemeta-harvest.json is ignored because you already have a codemeta.json!"
+            if [ -e CITATION.CFF ] || [ -e CITATION.cff ] || [ -e CITATION ]; then
+                info "Your CITATION.cff is ignored because you already have a codemeta.json!"
+            fi
         else
             #No codemeta found, automatically extract from other sources.
             #(This allows for recombining from multiple sources)
