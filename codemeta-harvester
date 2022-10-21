@@ -207,7 +207,8 @@ harvest() {
         if [ -e codemeta.json ] && [ $IGNORE -eq 0 ]; then
             #If there is an explicit codemeta.json, we will forego on all other detection methods
             #and assume it it the sole authoritative source for metadata.
-            info "found codemeta for $ID"
+            SUM=$(md5sum codemeta.json | cut -d " " -f 1)
+            info "found codemeta.json for $ID (md5sum $SUM); **NOTE: this is considered authoritative and most other detection methods will be skipped now!**"
             #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
             if dasel -n -f codemeta.json > /dev/null; then
                 cp codemeta.json "$CACHEDIR/tmp/10-jsonld.$ID.codemeta.json"
@@ -224,7 +225,8 @@ harvest() {
             #any other existing metadata that can be found
             cd "$scandir" || die "Unable to enter $scandir"
             if [ -e codemeta-harvest.json ]; then
-                info "found codemeta-harvest.json for $ID"
+                SUM=$(md5sum codemeta-harvest.json | cut -d " " -f 1)
+                info "found codemeta-harvest.json for $ID (md5sum $SUM); values in here take precendence over (override) those in later detection stages"
                 #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
                 if dasel -n -f codemeta-harvest.json > /dev/null; then
                     cp codemeta-harvest.json "$CACHEDIR/tmp/10-harvest.$ID.codemeta.json"
