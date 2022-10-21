@@ -384,7 +384,7 @@ harvest() {
             cd "$scandir" || die "Unable to enter $scandir"
             for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD INSTALL.MD; do
                 if [ -e "$f" ]; then
-                    info "Found buildInstructions ($f)"
+                    info "Found buildInstructions in $f"
                     echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
                     break
                 fi
@@ -426,7 +426,7 @@ harvest() {
                 if [ -e "$f" ]; then
 
                     #Detect TRL via badges
-                    info "Looking for TRL information in README..."
+                    info "Looking for TRL information in $f..."
                     TRL=$("$SCRIPTDIR/detect-trl.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$TRL" ]; then
                         info "Found TRL $TRL"
@@ -442,7 +442,7 @@ harvest() {
                     flushlog
 
                     #Detect developmentStatus via repostatus badges
-                    info "Looking for repostatus information in README..."
+                    info "Looking for repostatus information in $f..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus $REPOSTATUS"
@@ -451,7 +451,7 @@ harvest() {
                     flushlog
 
                     #Detect contIntegration 
-                    info "Looking for continuous integration information in README..."
+                    info "Looking for continuous integration information in $f..."
                     CI=$("$SCRIPTDIR/detect-ci.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$CI" ]; then
                         info "Found CI $CI"
@@ -461,7 +461,7 @@ harvest() {
 
 
                     #Detect links to documentation
-                    info "Looking for documentation links in README..."
+                    info "Looking for documentation links in $f..."
                     URLS=$("$SCRIPTDIR/detect-documentation.sh" < "$f" 2> "$TMPLOG")
                     if [ -n "$URLS" ]; then
                         echo "{ \"softwareHelp\": [" > "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
@@ -544,7 +544,7 @@ harvest() {
             for f in $README; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
-                    info "Looking for repostatus information in master branch..."
+                    info "Looking for repostatus information in $f in master branch..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus (master branch) $REPOSTATUS"
