@@ -4,7 +4,12 @@
 # This tool attempts to detect the license from the full license text
 # and returns an SPDX identifier. It only supports a very limited set of common open source licenses
 
-for file in README.md README.MD README.rst README README.txt README.TXT; do
+#variants of README.md
+README="README.md README.rst README README.txt README.TXT README.MD readme readme.txt readme.md ReadMe.md ReadMe.txt ReadMe"
+LICENCES="LICENSE COPYING COPYRIGHT copyright LICENCE  LICENCE.* license licence licence.* license.* LICENSE.*"
+
+
+for file in $README; do
     [ -e "$file" ] || continue;
     echo "Trying $file ...">&2
     SPDX=$(grep "SPDX-License-Identifier:" "$file" | sed -e 's/^.*SPDX-License-Identifier://')
@@ -14,7 +19,7 @@ for file in README.md README.MD README.rst README README.txt README.TXT; do
     fi
 done
 
-for file in LICENSE LICENSE.md LICENSE.txt COPYING COPYRIGHT LICENCE LICENCE.md LICENCE.txt; do
+for file in $LICENSES ; do
     [ -e "$file" ] || continue;
     echo "Trying $file ...">&2
     TEXT=$(head -n 10 "$file" | tr "[:lower:]" "[:upper:]")
