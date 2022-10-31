@@ -13,7 +13,7 @@ mime = magic.Magic(mime=True)
 # there is also a python package for it, but it is not maintained any more since
 # 2020ish, also I could not make it work 
 # https://github.com/douban/linguist
-def process_linguist(lg_json_path: Path, save_path='linguist.codemeta.json'):
+def process_linguist(lg_json_path: Path, save_path: Path='linguist.codemeta.json', richmeta: bool=False) -> None:
     """_summary_
 
     :param lg_json_path: _description_
@@ -26,6 +26,9 @@ def process_linguist(lg_json_path: Path, save_path='linguist.codemeta.json'):
 
     code_meta_keys, additional_metadata = parse_json_linguist(lg_json=lg_json)
     
+    if richmeta:
+        code_meta_keys.update(additional_metadata)
+
     with open(save_path, 'w') as fileo:
         json.dump(code_meta_keys, fileo)
 
@@ -79,9 +82,8 @@ def parse_json_linguist(lg_json: dict, repo_path: Path='.') -> Tuple[dict, dict]
     
     additional_metadata =  {
        "programmingLanguagePercentageSize" : lang_percent,
-       "fileFormat" : list(set(file_formats)), # mime type
-       "fileEndings" : list(set(fileends)),
-       "fileSize" : f"{total_size}KB"}
+       "fileEndings" : list(set(fileends))
+       }
     
     return code_meta_keys, additional_metadata
     
