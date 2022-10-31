@@ -99,6 +99,25 @@ Or for Docker:
 
 `docker run -v /path/to/your/configdir/:/config -v $(pwd):/data proycon/codemeta-harvester /config`
 
+## Composition and precedence
+
+Codemeta-harvester relies [codemetapy](https://github.com/proycon/codemetapy) to combine different input sources into one `codemeta.json`, we call this *composition*. 
+
+When a certain input source defines a property (on `schema:SoftwareSourceCode`), it will *overwrite* any values that were set earlier by previous sources. This entails that there is a certain order of precedence in which sources codemeta-harvester considers more important than others. The priority is roughly the following:
+
+1. ``codemeta.json``, if this file is provided, the harvest won't look at anything else (aside from the three exceptions mentioned at the end).
+2. ``codemeta-harvest.json``
+3. ``CITATION.cff``
+3. Language specific metadata from ``setup.py``, ``pyproject.toml``, ``pom.xml``, ``package.json`` and similar.
+4. files such as `LICENSE`,  `CONTRIBUTORS`, `AUTHORS`, `README`
+5. Information from git (e.g. contributors, git tag for version, date of first/last commit)
+6. Information from the github or gitlab API (e.g. project name/description)
+
+Three notable exceptions are:
+
+1. For development status, repostatus badge in the `README.md` *in the git master/main branch* takes precendence over all else (overriding whatever is in codemeta.json!)
+2. For maintainers, the parsing of `MAINTAINERS` *in the git master/main branch* is always taken into account (merged with anything in codemeta.json)
+3. If the harvester finds a version-specific DOI at [Zenodo](https://zenodo.org) for your software, it will always use that (overriding whatever is in codemeta.json)
 
 ## Acknowledgement
 

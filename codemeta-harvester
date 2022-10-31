@@ -3,7 +3,7 @@
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 #Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD ReadMe.md readme.md README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
-VERSION="0.2.3" #also update in codemeta.json
+VERSION="0.3.0" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
@@ -191,6 +191,7 @@ harvest() {
         CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --released"
     fi
     SCANDIRS="$4 ."
+    info "Git reference: $REF"
     #ensure there is nothing left from previous runs (might happen if one was run with --keep)
     rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
     for scandir in $SCANDIRS; do
@@ -206,7 +207,8 @@ harvest() {
         if [ -e codemeta.json ] && [ $IGNORE -eq 0 ]; then
             #If there is an explicit codemeta.json, we will forego on all other detection methods
             #and assume it it the sole authoritative source for metadata.
-            info "found codemeta for $ID"
+            SUM=$(md5sum codemeta.json | cut -d " " -f 1)
+            info "found codemeta.json for $ID (md5sum $SUM); **NOTE: this is considered authoritative and most other detection methods will be skipped now!**"
             #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
             if dasel -n -f codemeta.json > /dev/null; then
                 cp codemeta.json "$CACHEDIR/tmp/10-jsonld.$ID.codemeta.json"
@@ -214,6 +216,10 @@ harvest() {
             else
                 error "codemeta.json for $ID is not well-formed"
                 [ $STRICT -eq 1 ] && return 1
+            fi
+            [ -e codemeta-harvest.json ] && info "Your codemeta-harvest.json is ignored because you already have a codemeta.json!"
+            if [ -e CITATION.CFF ] || [ -e CITATION.cff ] || [ -e CITATION ]; then
+                info "Your CITATION.cff is ignored because you already have a codemeta.json!"
             fi
         else
             #No codemeta found, automatically extract from other sources.
@@ -223,7 +229,8 @@ harvest() {
             #any other existing metadata that can be found
             cd "$scandir" || die "Unable to enter $scandir"
             if [ -e codemeta-harvest.json ]; then
-                info "found codemeta-harvest.json for $ID"
+                SUM=$(md5sum codemeta-harvest.json | cut -d " " -f 1)
+                info "found codemeta-harvest.json for $ID (md5sum $SUM); values in here take precendence over (override) those in later detection stages"
                 #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
                 if dasel -n -f codemeta-harvest.json > /dev/null; then
                     cp codemeta-harvest.json "$CACHEDIR/tmp/10-harvest.$ID.codemeta.json"
@@ -377,7 +384,7 @@ harvest() {
             cd "$scandir" || die "Unable to enter $scandir"
             for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD INSTALL.MD; do
                 if [ -e "$f" ]; then
-                    info "Found buildInstructions ($f)"
+                    info "Found buildInstructions in $f"
                     echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
                     break
                 fi
@@ -390,6 +397,23 @@ harvest() {
             fi
             #fi
 
+            ##Query DOI via Zenodo API, retrieves the DOI specific to this version
+            if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
+                if [ -n "$ZENODO_ACCESS_TOKEN" ]; then
+                    info "Querying Zenodo API for DOI (access token provided)..."
+                    Q="?access_token=$ZENODO_ACCESS_TOKEN&"
+                else
+                    info "Querying Zenodo API for DOI (no access token provided)..."
+                    Q="?"
+                fi
+                DOI=$(curl "https://zenodo.org/api/records/${Q}q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -p json -s ".hits.hits.[0].links.doi" | tr -d '"')
+                if [ -n "$DOI" ]; then
+                    info "Found DOI $DOI"
+                    #takes precendence over codemeta.json (because it's impossible to include a codemeta.json with a DOI in a version tagged repo)
+                    echo "{ \"identifier\": [ \"$IDENTIFIER\", { \"@type\": \"PropertyValue\",\"propertyID\":\"doi\", \"value\": \"$DOI\" } ] }"  > "$CACHEDIR/tmp/05-doi.$ID.codemeta.json" 
+                fi
+            fi
+
             cd "$scandir" || die "Unable to enter $scandir"
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
@@ -400,8 +424,25 @@ harvest() {
             cd "$scandir" || die "Unable to enter $scandir"
             for f in $README; do
                 if [ -e "$f" ]; then
+
+                    #Detect TRL via badges
+                    info "Looking for TRL information in $f..."
+                    TRL=$("$SCRIPTDIR/detect-trl.sh" < "$f" 2> "$TMPLOG" | head -n 1)
+                    if [ -n "$TRL" ]; then
+                        info "Found TRL $TRL"
+                        #(note: codemetapy will rewrite technologyReadinessLevel to codemeta:developmentStatus in a final reconciliation step)
+                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                    elif [ "$REPOSTATUS" = "https://www.repostatus.org/#concept" ]; then
+                        info "Mapping repostatus $REPOSTATUS to trl:Stage2Concept"
+                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage2Concept\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                    elif [ "$REPOSTATUS" = "https://www.repostatus.org/#wip" ]; then
+                        info "Mapping repostatus $REPOSTATUS to trl:Stage3Experimental"
+                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage3Experimental\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                    fi
+                    flushlog
+
                     #Detect developmentStatus via repostatus badges
-                    info "Looking for repostatus information in README..."
+                    info "Looking for repostatus information in $f..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus $REPOSTATUS"
@@ -409,23 +450,8 @@ harvest() {
                     fi
                     flushlog
 
-                    #Detect TRL via badges
-                    info "Looking for TRL information in README..."
-                    TRL=$("$SCRIPTDIR/detect-trl.sh" < "$f" 2> "$TMPLOG" | head -n 1)
-                    if [ -n "$TRL" ]; then
-                        info "Found TRL $TRL"
-                        echo "{ \"technologyReadinessLevel\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
-                    elif [ "$REPOSTATUS" = "https://www.repostatus.org/#concept" ]; then
-                        info "Mapping repostatus $REPOSTATUS to trl:Stage2Concept"
-                        echo "{ \"technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage2Concept\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
-                    elif [ "$REPOSTATUS" = "https://www.repostatus.org/#wip" ]; then
-                        info "Mapping repostatus $REPOSTATUS to trl:Stage3Experimental"
-                        echo "{ \"technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage3Experimental\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
-                    fi
-                    flushlog
-
                     #Detect contIntegration 
-                    info "Looking for continuous integration information in README..."
+                    info "Looking for continuous integration information in $f..."
                     CI=$("$SCRIPTDIR/detect-ci.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$CI" ]; then
                         info "Found CI $CI"
@@ -433,18 +459,22 @@ harvest() {
                     fi
                     flushlog
 
+
                     #Detect links to documentation
-                    info "Looking for documentation links in README..."
-                    SEQNR=50
+                    info "Looking for documentation links in $f..."
                     URLS=$("$SCRIPTDIR/detect-documentation.sh" < "$f" 2> "$TMPLOG")
                     if [ -n "$URLS" ]; then
+                        echo "{ \"softwareHelp\": [" > "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
+                        COUNT=0
                         for URL in $URLS; do
                             TITLE=$(scrape_html_title "$URL")
                             [ -n "$TITLE" ] && TITLE="\"name\": \"$TITLE\","
-                            echo "{ \"softwareHelp\": { \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" } }" > "$CACHEDIR/tmp/$SEQNR-documentation.$ID.codemeta.json"
                             info "Found documentation at $URL : $TITLE"
-                            SEQNR=$((SEQNR+1))
+                            [ $COUNT -gt 0 ] && echo "," >>  "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
+                            echo "{ \"@id\": \"$URL\", $TITLE \"@type\": \"WebSite\", \"url\": \"$URL\" }" >>  "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
+                            COUNT=$((COUNT+1))
                         done
+                        echo "]}" >> "$CACHEDIR/tmp/50-documentation.$ID.codemeta.json"
                     fi
                     flushlog
                     break
@@ -514,17 +544,18 @@ harvest() {
             for f in $README; do
                 if [ -e "$f" ]; then
                     #Detect developmentStatus via repostatus badges
-                    info "Looking for repostatus information in master branch..."
+                    info "Looking for repostatus information in $f in master branch..."
                     REPOSTATUS=$("$SCRIPTDIR/detect-repostatus.sh" < "$f" 2> "$TMPLOG" | head -n 1)
                     if [ -n "$REPOSTATUS" ]; then
                         info "Found repostatus (master branch) $REPOSTATUS"
-                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/05-repostatus.$ID.codemeta.json" #this overwrite the version-specific one
+                        echo "{ \"developmentStatus\": \"$REPOSTATUS\" }" > "$CACHEDIR/tmp/05-repostatus.$ID.codemeta.json" #this overwrite the version-specific one and takes precendence even over codemeta.json!
                     fi
                     flushlog
                 fi
             done
 
             if [ -f MAINTAINERS ]; then
+                #takes precendence even over codemeta.json!
                 info "Parsing MAINTAINERS from master branch..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/05-maintainers.$ID.codemeta.json" -i maintainers "MAINTAINERS" 2> "$TMPLOG" >&2; then
@@ -572,7 +603,10 @@ harvest() {
         [ $STDOUT -eq 0 ] && rm "$OUTPUTDIR/$ID.codemeta.json" 2>/dev/null #clean up possible partial output
         return 1
     else
+        OLD_DEBUG=$DEBUG
+        DEBUG=1 #force log output for reconciliation step
         flushlog
+        DEBUG=$OLD_DEBUG
         [ $STDOUT -eq 0 ] && info "Output written to $OUTPUTDIR/$ID.codemeta.json"
     fi
     [ $KEEPCACHE -eq 0 ] && rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
@@ -718,16 +752,15 @@ process() {
 
 if [ $# -eq 0 ]; then
     #no configuration provided, just harvest only current project
-    if [ -z "$IDENTIFIER" ]; then
-        IDENTIFIER="$(basename "$(pwd)")"
-    fi
     info "No configuration provided, harvesting current project"
     info "Attempting to guess source repo"
     SOURCEREPO=$(git remote get-url origin | sed -e "s|git@\(.*\):|https://\1/|")
     if [ -n "$SOURCEREPO" ]; then
         info "Source repo is $SOURCEREPO"
+        [ -z "$IDENTIFIER" ] && IDENTIFIER=$(basename "$SOURCEREPO" | sed "s|.git||")
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\" --codeRepository \"$SOURCEREPO\""
     else
+        [ -z "$IDENTIFIER" ] && IDENTIFIER="$(basename "$(pwd)")"
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$IDENTIFIER\""
     fi
     if [ -n "$VALIDATE" ]; then
