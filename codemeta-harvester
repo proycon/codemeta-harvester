@@ -191,6 +191,7 @@ harvest() {
         CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --released"
     fi
     SCANDIRS="$4 ."
+    GROUP="$5"
     info "Git reference: $REF"
     #ensure there is nothing left from previous runs (might happen if one was run with --keep)
     rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
@@ -565,6 +566,12 @@ harvest() {
             fi
         fi
 
+        if [ -n "$GROUP" ]; then
+            #groups assigned in the harvester configuration always take precendence, even over codemeta.json
+            info "Setting group $GROUP"
+            echo "{ \"applicationSuite\": \"$GROUP\" }" > "$CACHEDIR/tmp/04-applicationSuite.$ID.codemeta.json"
+        fi
+
         if [ -n "$CURRENT_BRANCH" ]; then
             if ! git checkout "$CURRENT_BRANCH" 2> "$TMPLOG"; then
                 #fallback, stash and retry
@@ -663,6 +670,8 @@ process() {
     ROOTPATH=$(dasel --null -r yaml ".root" < "$CONFIGFILE")
     SCANDIRS=$(dasel --null -r yaml --plain ".scandirs" < "$CONFIGFILE" | tr -d "[]")
     SERVICE_URLS=$(dasel --null -r yaml --plain ".services" < "$CONFIGFILE" | tr -d "[]")
+    GROUP=$(dasel --null -r yaml --plain ".group" < "$CONFIGFILE" | tr -d "[]")
+    [ "$GROUP" = "null" ] && GROUP=
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
     REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
     LOGFILE="$OUTPUTDIR/$ID.harvest.log"
@@ -702,7 +711,7 @@ process() {
                 if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
                     cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
                 fi
-                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" "$GROUP"
             else
                 error "Failed to git pull $SOURCEREPO"
                 unset -v LOGFILE
@@ -724,7 +733,7 @@ process() {
                 if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
                     cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
                 fi
-                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS"
+                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" "$GROUP"
             else
                 error "Failed to git clone $SOURCEREPO"
                 unset -v LOGFILE
