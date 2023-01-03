@@ -90,6 +90,7 @@ Additional properties you may specify:
     version. If not set, codemeta-harvester will check out the latest
     version tag by default (this assumes you use some kind of semantic versioning for your tags). Only if no tags are present at all, it
     falls back to using the `master` or `main` branch directly.
+* `tagprefix` - A prefix used for the git tags (only applicable in edge cases), the last part of the tag must still comply to a semantic versioning scheme.
 
 Pass the directory where you put your configurations (or a single configuration file) to codemeta-harvester as follows:
 
