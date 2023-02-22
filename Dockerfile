@@ -3,10 +3,7 @@ FROM alpine:latest
 #you may set this to something like: git+https://github.com/proycon/codemetapy.git@master  if you want to use a development version of codemetapy instead of the latest release
 ARG CODEMETAPY_VERSION="stable"
 
-RUN apk add python3 py3-pip py3-yaml py3-ruamel.yaml py3-requests py3-matplotlib py3-markdown py3-rdflib py3-lxml py3-wheel cython git dasel curl recode gawk
-
-#pandoc is not in stable yet, grab from edge/testing:
-RUN apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/ pandoc
+RUN apk add python3 py3-pip py3-yaml py3-ruamel.yaml py3-requests py3-matplotlib py3-markdown py3-rdflib py3-lxml py3-wheel cython git dasel curl recode gawk pandoc
 
 ENV GIT_TERMINAL_PROMPT=0
 
