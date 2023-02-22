@@ -20,7 +20,7 @@
     "name": "codemeta-harvester",
     "version": "0.3.1",
     "dateCreated": "2022-01-05T16:21:48Z",
-    "dateModified": "2022-11-09T13:14:44Z",
+    "dateModified": "2023-02-22T23:39:44Z",
     "description": "Harvest and aggregate codemeta from source repositories and service endpoints, automatically converting known metadata schemes in the process",
     "developmentStatus": [ "https://www.repostatus.org/#active", "https://w3id.org/research-technology-readiness-level#Level7ReleaseCandidate" ],
     "codeRepository": "https://github.com/proycon/codemeta-harvester.git",
