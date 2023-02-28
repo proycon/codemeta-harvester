@@ -432,13 +432,13 @@ harvest() {
                     if [ -n "$TRL" ]; then
                         info "Found TRL $TRL"
                         #(note: codemetapy will rewrite technologyReadinessLevel to codemeta:developmentStatus in a final reconciliation step)
-                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                        echo "{ \"https://w3id.org/research-technology-readiness-levels#technologyReadinessLevel\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
                     elif [ "$REPOSTATUS" = "https://www.repostatus.org/#concept" ]; then
                         info "Mapping repostatus $REPOSTATUS to trl:Stage2Concept"
-                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage2Concept\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                        echo "{ \"https://w3id.org/research-technology-readiness-levels#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-levels#Stage2Concept\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
                     elif [ "$REPOSTATUS" = "https://www.repostatus.org/#wip" ]; then
                         info "Mapping repostatus $REPOSTATUS to trl:Stage3Experimental"
-                        echo "{ \"https://w3id.org/research-technology-readiness-level#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-level#Stage3Experimental\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
+                        echo "{ \"https://w3id.org/research-technology-readiness-levels#technologyReadinessLevel\": \"https://w3id.org/research-technology-readiness-levels#Stage3Experimental\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
                     fi
                     flushlog
 
