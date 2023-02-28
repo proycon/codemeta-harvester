@@ -4,10 +4,10 @@ check:
 	shellcheck codemeta-harvester *.sh
 
 docker-dev:
-	docker build -t proycon/codemeta-harvester:dev --build-arg CODEMETAPY_VERSION=git+https://github.com/proycon/codemetapy.git@master .
+	docker build --no-cache -t proycon/codemeta-harvester:dev --build-arg CODEMETAPY_VERSION=git+https://github.com/proycon/codemetapy.git@master .
 
 docker:
-	docker build -t proycon/codemeta-harvester .
+	docker build --no-cache -t proycon/codemeta-harvester .
 
 env:
 	python3 -m venv env
