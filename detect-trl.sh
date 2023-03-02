@@ -3,7 +3,7 @@
 
 # This script attempts to detect the technology readiness level from standard input;
 # it should passed the README.md file
-# It will return a full URI like https://www.repostatus.org/#active
+# It will return a full URI like https://w3id.org/research-technology-readiness-levels#Level9Proven
  
 set -e
 BADGE=$(grep -o -E "https://w3id.org/research-technology-readiness-levels/[A-Za-z0-9]+.svg")
