@@ -6,9 +6,9 @@
         "https://w3id.org/software-iodata"
     ],
     "author": {
+        "@id": "https://orcid.org/0000-0002-1046-0006",
         "affiliation": {
-            "name": "KNAW Humanities Cluster & CLST, Radboud University",
-            "@type": "Organization"
+            "@id": "https://huc.knaw.nl"
         },
         "familyName": "van Gompel",
         "givenName": "Maarten",
@@ -28,17 +28,51 @@
     "identifier": "codemeta-harvester",
     "issueTracker": "https://github.com/proycon/codemeta-harvester/issues",
     "readme": "https://github.com/proycon/codemeta-harvester/blob/master/README.md",
+    "keywords": [
+        "metadata",
+        "codemeta",
+        "rdf",
+        "software metadata",
+        "schema.org",
+        "linked data",
+        "harvester"
+    ],
     "maintainer": {
+        "@id": "https://orcid.org/0000-0002-1046-0006",
         "affiliation": {
-            "name": "KNAW Humanities Cluster",
-            "@type": "Organization"
+            "@id": "https://huc.knaw.nl"
         },
         "familyName": "van Gompel",
         "givenName": "Maarten",
         "url": "https://proycon.anaproy.nl",
         "@type": "Person"
     },
+    "producer": {
+        "@id": "https://huc.knaw.nl",
+        "@type": "Organization",
+        "name": "KNAW Humanities Cluster",
+        "url": "https://huc.knaw.nl",
+        "parentOrganization": {
+            "@id": "https://knaw.nl",
+            "@type": "Organization",
+            "name": "KNAW",
+            "url": "https://knaw.nl",
+            "location": {
+                "@type": "Place",
+                "name": "Amsterdam"
+            }
+        }
+    },
     "programmingLanguage": "shell",
+    "softwareRequirements": [
+        {
+            "@id": "/dependency/codemetapy",
+            "@type": "SoftwareApplication",
+            "identifier": "codemetapy",
+            "name": "codemetapy",
+            "runtimePlatform": "Python 3"
+        },
+    ],
     "funding": {
         "@type": "Grant",
         "name": "CLARIAH-PLUS (NWO grant 184.034.023)",
@@ -47,5 +81,10 @@
             "name": "NWO", 
             "url": "https://www.nwo.nl"
         }
+    },
+    "targetProduct": {
+        "@type": "CommandLineApplication",
+        "executableName": "codemeta-harvester",
+        "name": "codemeta-harvester"
     }
 }
