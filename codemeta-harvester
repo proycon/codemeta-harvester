@@ -429,6 +429,11 @@ harvest() {
                     #Detect TRL via badges
                     info "Looking for TRL information in $f..."
                     TRL=$("$SCRIPTDIR/detect-trl.sh" < "$f" 2> "$TMPLOG" | head -n 1)
+                    if [ -z "$TRL" ]; then
+                        #Infer TRL via stability marker (https://masterminds.github.io/stability/)
+                        #note: this may also return a repostatus if more appropriate
+                        TRL=$("$SCRIPTDIR/detect-trl-from-stability.sh" < "$f" 2> "$TMPLOG" | head -n 1)
+                    fi
                     if [ -n "$TRL" ]; then
                         info "Found TRL $TRL"
                         echo "{ \"developmentStatus\": \"$TRL\" }" > "$CACHEDIR/tmp/11-trl.$ID.codemeta.json"
