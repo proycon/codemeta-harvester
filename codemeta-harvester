@@ -650,11 +650,7 @@ get_latest_version() {
         git_default_branch
     else
         info "Found release $TAG"
-        if [ -n "$TAGPREFIX" ]; then
-            echo "$TAG" | sed -e "s/$TAGPREFIX//"
-        else
-            echo "$TAG"
-        fi
+        echo "$TAG"
     fi
 }
 
