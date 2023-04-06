@@ -374,16 +374,6 @@ harvest() {
                     ;;
             esac
 
-            #Add README URL
-            cd "$scandir" || die "Unable to enter $scandir"
-            for f in $README; do
-                if [ -e "$f" ]; then
-                    info "Found $f"
-                    echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
-                    break
-                fi
-            done
-
             #Add build instructions URL
             cd "$scandir" || die "Unable to enter $scandir"
             for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD INSTALL.MD; do
@@ -575,6 +565,16 @@ harvest() {
                 flushlog
             fi
         fi
+
+        #Add README URL
+        cd "$scandir" || die "Unable to enter $scandir"
+        for f in $README; do
+            if [ -e "$f" ]; then
+                info "Found $f"
+                echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
+                break
+            fi
+        done
 
         if [ -n "$GROUP" ]; then
             #groups assigned in the harvester configuration always take precendence, even over codemeta.json
