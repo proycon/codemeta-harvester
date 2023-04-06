@@ -3,7 +3,7 @@
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 #Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD ReadMe.md readme.md README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
-VERSION="0.3.4" #also update in codemeta.json
+VERSION="0.3.5" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
@@ -199,7 +199,10 @@ harvest() {
         oldcwd="$(pwd)"
         [ ! -d "$scandir" ] && continue
         info "Scanning directory $(realpath "$scandir") for harvestable resources..."
-        cd "$scandir" || die "Unable to enter $scandir"
+        if ! cd "$scandir"; then
+            error "Unable to enter $scandir"
+            continue
+        fi
 
         CLEAN_README=0
 
@@ -527,7 +530,10 @@ harvest() {
             if ! git checkout "$DEFAULT_BRANCH" 2> "$TMPLOG"; then
                 #fallback, stash and retry:
                 git stash -u 2>> "$TMPLOG"
-                git checkout "$DEFAULT_BRANCH" 2>> "$TMPLOG" || die "Unable to checkout default git branch $DEFAULT_BRANCH"
+                if ! git checkout "$DEFAULT_BRANCH" 2>> "$TMPLOG"; then
+                    error "Unable to checkout default git branch $DEFAULT_BRANCH"
+                    continue
+                fi
             fi
         else
             CURRENT_BRANCH=
@@ -580,7 +586,10 @@ harvest() {
             if ! git checkout "$CURRENT_BRANCH" 2> "$TMPLOG"; then
                 #fallback, stash and retry
                 git stash -u 2>> "$TMPLOG"
-                git checkout "$CURRENT_BRANCH" || die "Unable to switch to previous git branch"
+                if ! git checkout "$CURRENT_BRANCH"; then
+                    error "Unable to switch to previous git branch"
+                    continue
+                fi
             fi
             cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
@@ -667,7 +676,10 @@ scrape_html_title() {
 
 process() {
     #read a configuration file and harvest the source
-    cd "$WORKDIR" || die "Unable to enter $WORKDIR"
+    if ! cd "$WORKDIR"; then
+        error "Unable to enter $WORKDIR"
+        return 1
+    fi
     CONFIGFILE="$1"
     ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
     SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
@@ -684,7 +696,10 @@ process() {
     echo "(log file starts at $(date))" > "$LOGFILE"
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
         #no source repo defined: service is an 'orphan'
-        [ -n "$SERVICE_URLS" ] || die "invalid configuration: $ID"
+        if [ -z "$SERVICE_URLS" ]; then
+            error "invalid configuration: $ID"
+            return 1
+        fi
         info "--> Processing orphan service $ID [$(date)]"
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\""
         [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
@@ -697,49 +712,78 @@ process() {
         CODEMETAPY_RECONCILE_ARGS="--identifier \"$ID\" --codeRepository \"$SOURCEREPO\""
         [ -n "$VALIDATE" ] && CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
         if [ -d "$CACHEDIR/$ID" ]; then
-            cd "$CACHEDIR/$ID" || die "failed to enter directory $CACHEDIR/$ID"
+            if ! cd "$CACHEDIR/$ID"; then
+                error "failed to enter directory $CACHEDIR/$ID"
+                return 1
+            fi
             info "Git updating cached clone of $SOURCEREPO..."
             if git fetch origin --tags 2> "$TMPLOG" >&2; then
                 if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                     REF=$(get_latest_version)
                 fi
-                info "Using $REF"
-                if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
-                    git stash -u 2>> "$TMPLOG"
-                    git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG" || die "Invalid git ref '$REF' or unclean working dir"
+                if [ -n "$REF" ]; then
+                    info "Using '$REF'"
+                    if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
+                        git stash -u 2>> "$TMPLOG"
+                        if ! git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG"; then
+                            error "Invalid git ref '$REF' or unclean working dir"
+                            return 1
+                        fi
+                    fi
+                    #pull may still be needed to fast-forward local branch
+                    if ! git pull origin $REF; then
+                        error "Failed to pull $SOURCEREPO"
+                        unset -v LOGFILE
+                        exit 1
+                    fi
+                    if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
+                        if ! cd "$ROOTPATH"; then
+                            error "Unable to enter $ROOTPATH"; 
+                            return 1
+                        fi
+                    fi
+                    harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" "$GROUP"
+                else
+                    error "Invalid git ref '$REF'"
                 fi
-                #pull may still be needed to fast-forward local branch
-                if ! git pull origin $REF; then
-                    error "Failed to pull $SOURCEREPO"
-                    unset -v LOGFILE
-                    exit 1
-                fi
-                if [ -n "$ROOTPATH" ] && [ "$ROOTPATH" != "null" ]; then
-                    cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
-                fi
-                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" "$GROUP"
             else
                 error "Failed to git pull $SOURCEREPO"
                 unset -v LOGFILE
                 return 1
             fi
         else
-            cd "$CACHEDIR" || die "failed to enter cache directory $CACHEDIR"
+            if ! cd "$CACHEDIR"; then
+                error "failed to enter cache directory $CACHEDIR"
+                return 1
+            fi
             info "Git light cloning $SOURCEREPO..."
             if git clone --filter=blob:limit=999k "$SOURCEREPO" "$CACHEDIR/$ID" 2> "$TMPLOG" >&2; then
-                cd "$CACHEDIR/$ID" || die "failed to enter dir $CACHEDIR/$ID"
+                if ! cd "$CACHEDIR/$ID"; then
+                    error "failed to enter dir $CACHEDIR/$ID"
+                    return 1
+                fi
                 if [ -z "$REF" ] || [ "$REF" = "null" ]; then
                     REF=$(get_latest_version)
                 fi
-                info "Using $REF for $ID"
-                if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
-                    git stash -u 2>> "$TMPLOG"
-                    git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG" || die "Invalid git ref '$REF' or unclean working dir"
+                if [ -n "$REF" ]; then
+                    info "Using $REF for $ID"
+                    if ! git -c advice.detachedHead=false checkout -f "$REF" 2> "$TMPLOG" >&2; then
+                        git stash -u 2>> "$TMPLOG"
+                        if ! git -c advice.detachedHead=false checkout -f "$REF" 2>> "$TMPLOG"; then
+                            error "Invalid git ref '$REF' or unclean working dir"
+                            return 1
+                        fi
+                    fi
+                    if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
+                        if ! cd "$ROOTPATH"; then
+                            error "Unable to enter $ROOTPATH"
+                            return 1
+                        fi
+                    fi
+                    harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" "$GROUP"
+                else
+                    error "Invalid git ref '$REF'"
                 fi
-                if [ -n "$ROOTPATH" ]  && [ "$ROOTPATH" != "null" ]; then
-                    cd "$ROOTPATH" || die "Unable to enter $ROOTPATH"
-                fi
-                harvest "$ID" "$REF" "$CODEMETAPY_RECONCILE_ARGS" "$SCANDIRS" "$GROUP"
             else
                 error "Failed to git clone $SOURCEREPO"
                 unset -v LOGFILE
@@ -785,6 +829,9 @@ if [ $# -eq 0 ]; then
         if [ ! -e "codemeta.json" ] || [ $REGEN -eq 1 ]; then
             mv "$OUTPUTDIR/$IDENTIFIER.codemeta.json" codemeta.json && info "Output renamed to $(pwd)/codemeta.json"
         fi
+        exit 0
+    else
+        exit 1
     fi
 else
     #configuration files/directory provided, process them
@@ -793,18 +840,20 @@ else
     if [ -n "$VALIDATE" ]; then
         CODEMETAPY_RECONCILE_ARGS="$CODEMETAPY_RECONCILE_ARGS --validate $VALIDATE"
     fi
+    RET=0
     for TARGET in "$@"; do
         if [ -f "$TARGET" ]; then
-            process "$TARGET"
+            process "$TARGET" || RET=1
             FOUND=1
         elif [ -d "$TARGET" ]; then
             for SUBTARGET in "$TARGET"/*.yml; do
                 if [ -e "$SUBTARGET" ]; then
-                    process "$SUBTARGET"
+                    process "$SUBTARGET" || RET=1
                     FOUND=1
                 fi
             done
         fi
     done
     [ $FOUND -eq 0 ] && die "No *.yml configuration files for the harvester. Just want to run without configuration on the current working directory? Then leave out the positional parameter"
+    exit $RET
 fi
