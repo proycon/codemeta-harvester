@@ -26,7 +26,7 @@ A docker container can be build as follows:
 
 ``make docker``
 
-A pre-built container image can also be pulled from Docker Hub once the software is released:
+A pre-built container image can also be pulled from Docker Hub:
 
 ``docker pull proycon/codemeta-harvester``
 
