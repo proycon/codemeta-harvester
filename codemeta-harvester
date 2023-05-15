@@ -682,16 +682,16 @@ process() {
     fi
     CONFIGFILE="$1"
     ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
-    SOURCEREPO=$(dasel -r yaml ".source" < "$CONFIGFILE")
-    ROOTPATH=$(dasel -r yaml ".root" < "$CONFIGFILE")
-    SCANDIRS=$(dasel -r yaml --plain ".scandirs" < "$CONFIGFILE" | tr -d "[]")
-    SERVICE_URLS=$(dasel -r yaml --plain ".services" < "$CONFIGFILE" | tr -d "[]")
-    GROUP=$(dasel -r yaml --plain ".group" < "$CONFIGFILE" | tr -d "[]")
-    TAGPREFIX=$(dasel -r yaml --plain ".tagprefix" < "$CONFIGFILE" | tr -d "[]")
-    [ "$GROUP" = "" ] && GROUP=
-    [ "$TAGPREFIX" = "" ] && TAGPREFIX=
+    SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
+    ROOTPATH=$(dasel --null -r yaml ".root" < "$CONFIGFILE")
+    SCANDIRS=$(dasel --null -r yaml --plain ".scandirs" < "$CONFIGFILE" | tr -d "[]")
+    SERVICE_URLS=$(dasel --null -r yaml --plain ".services" < "$CONFIGFILE" | tr -d "[]")
+    GROUP=$(dasel --null -r yaml --plain ".group" < "$CONFIGFILE" | tr -d "[]")
+    TAGPREFIX=$(dasel --null -r yaml --plain ".tagprefix" < "$CONFIGFILE" | tr -d "[]")
+    [ "$GROUP" = "null" ] && GROUP=
+    [ "$TAGPREFIX" = "null" ] && TAGPREFIX=
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
-    REF=$(dasel -r yaml ".ref" < "$CONFIGFILE")
+    REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
     LOGFILE="$OUTPUTDIR/$ID.harvest.log"
     echo "(log file starts at $(date))" > "$LOGFILE"
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
