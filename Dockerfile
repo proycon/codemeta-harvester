@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:3.17
 
 #you may set this to something like: git+https://github.com/proycon/codemetapy.git@master  if you want to use a development version of codemetapy instead of the latest release
 ARG CODEMETAPY_VERSION="stable"
