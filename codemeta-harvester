@@ -8,7 +8,7 @@ SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
 #variants of README.md
-README="README.md README.rst README README.txt README.TXT readme.txt README.MD ReadMe.md readme.md"
+README="README.md README.rst README README.txt README.TXT README.MD readme readme.txt readme.md ReadMe.md ReadMe.txt ReadMe"
 
 die() {
     DEBUG=1
@@ -76,7 +76,7 @@ usage() {
 }
 
 missing=0
-DEPENDENCIES="git sed python3 dasel codemetapy cffconvert recode awk"
+DEPENDENCIES="git sed python3 dasel codemetapy cffconvert recode awk github-linguist"
 for dependency in $DEPENDENCIES; do
     if ! command -v "$dependency" >/dev/null 2>/dev/null; then
         error "dependency $dependency not found" && missing=1
@@ -246,7 +246,7 @@ harvest() {
             fi
 
             cd "$scandir" || die "Unable to enter $scandir"
-            for f in CITATION.cff CITATION.CFF CITATION; do
+            for f in CITATION.cff CITATION.CFF CITATION citation.cff; do
                 if [ -e "$f" ]; then
                     info "found CITATION.cff for $ID, converting to codemeta"
                     if ! cffconvert -i "$f" -o "$CACHEDIR/tmp/12-citationcff.$ID.codemeta.json" -f codemeta 2> "$TMPLOG" >&2; then
@@ -259,7 +259,7 @@ harvest() {
             done
 
             cd "$scandir" || die "Unable to enter $scandir"
-            if [ -e setup.py ] || [ -e pyproject.toml ]; then
+            if [ -e setup.py ] || [ -e pyproject.toml ]; then #setup.json
                 info "found python setup for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
                 if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/20-python.$ID.codemeta.json" 2> "$TMPLOG" >&2; then
@@ -564,6 +564,9 @@ harvest() {
                 fi
                 flushlog
             fi
+
+
+
         fi
 
         #Add README URL
@@ -594,6 +597,12 @@ harvest() {
             cd "$oldcwd" || die "Unable to return to $oldcwd"
         fi
     done
+
+    # run github-linguist
+    cd "$scandir" || die "Unable to enter $scandir"
+    info "Parsing language information from files..."
+    LINGUISTSTATUS=$("$SCRIPTDIR/run-linguist.sh" 2> "$TMPLOG")
+    mv linguist.codemeta.json "$CACHEDIR"/tmp/linguist."$ID".codemeta.json
 
     files=$(ls -r "$CACHEDIR"/tmp/*."$ID".codemeta.json | tr "\n" " ")
 
