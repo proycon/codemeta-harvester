@@ -408,6 +408,8 @@ harvest() {
                 fi
             fi
 
+            
+
             cd "$scandir" || die "Unable to enter $scandir"
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
@@ -566,6 +568,7 @@ harvest() {
             fi
         fi
 
+
         #Add README URL
         cd "$scandir" || die "Unable to enter $scandir"
         for f in $README; do
@@ -575,6 +578,13 @@ harvest() {
                 break
             fi
         done
+
+        cd "$scandir" || die "Unable to enter $scandir"
+        if ! "$SCRIPTDIR/ensure-no-stub.sh"; then
+            info "Repository seems to be a stub and contains no actual code"
+            #takes precedence even over codemeta.json!
+            echo "{ \"review\": { \"reviewRating\": \"1\", \"name\": \"Automatic software metadata validation report\", \"reviewBody\": \"Violation: Software metadata MUST be kept as close to the source code as possible, but this source code repository seems to be a stub without actual code. Please see https://github.com/CLARIAH/clariah-plus/blob/main/requirements/software-metadata-requirements.md\" } }" > "$CACHEDIR/tmp/04-stub.$ID.codemeta.json"
+        fi
 
         if [ -n "$GROUP" ]; then
             #groups assigned in the harvester configuration always take precendence, even over codemeta.json
