@@ -654,7 +654,7 @@ get_latest_version() {
     #Assumes some kind of semantic versioning (possibly with a v prefix), also allows a one-letter suffix
     #does not allow suffixes like -rc1  and -alpha (those are seen as pre-releases rather than full releases)
     if [ -n "$TAGIGNORE" ]; then
-        TAG=$(git tag --sort version:refname | grep -E "^${TAGPREFIX}v?[0-9]+(\.[0-9])*[A-Za-z]?" | grep -vE "$TAGIGNORE" | tail -n 1)
+        TAG=$(git tag --sort version:refname | grep -E "^${TAGPREFIX}v?[0-9]+(\.[0-9])*[A-Za-z]?" | grep -viE "$TAGIGNORE" | tail -n 1)
     else
         TAG=$(git tag --sort version:refname | grep -E "^${TAGPREFIX}v?[0-9]+(\.[0-9])*[A-Za-z]?" | tail -n 1)
     fi
@@ -695,7 +695,7 @@ process() {
     TAGIGNORE=$(dasel --null -r yaml --plain ".tagignore" < "$CONFIGFILE" | tr -d "[]")
     [ "$GROUP" = "null" ] && GROUP=
     [ "$TAGPREFIX" = "null" ] && TAGPREFIX=
-    [ "$TAGIGNORE" = "null" ] && TAGIGNORE=alpha
+    [ "$TAGIGNORE" = "null" ] && TAGIGNORE=
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
     REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
     LOGFILE="$OUTPUTDIR/$ID.harvest.log"
