@@ -350,6 +350,7 @@ harvest() {
 
 
             cd "$scandir" || die "Unable to enter $scandir"
+            info "Getting top contributor from git..."
             #Set up a fallback in case no authors or maintainers are specified: simply assigns the top contributor
             if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot | sort -rn | cut -f 2 | head -n 1 > "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR"; then
                 error "git shortlog failed"
