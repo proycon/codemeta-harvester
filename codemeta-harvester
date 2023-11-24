@@ -291,6 +291,17 @@ harvest() {
                 flushlog
             fi
 
+            cd "$scandir" || die "Unable to enter $scandir"
+            if [ -e Cargo.toml ]; then
+                info "found Cargo.toml (rust) for $ID, converting to codemeta"
+                #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
+                if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/23-rust.$ID.codemeta.json" Cargo.toml 2> "$TMPLOG" >&2; then
+                    error "python setup.py to codemeta conversion failed for $ID (codemetapy failed)"
+                    [ $STRICT -eq 1 ] && return 1
+                fi
+                flushlog
+            fi
+
 
             cd "$scandir" || die "Unable to enter $scandir"
             [ -e "$SCRIPTDIR/detect-license.sh" ] || die "Unable to find detect-license.sh in $SCRIPTDIR"
