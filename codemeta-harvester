@@ -733,7 +733,7 @@ process() {
     TAGIGNORE=$(dasel --null -r yaml --plain ".tagignore" < "$CONFIGFILE" | tr -d "[]")
     [ "$GROUP" = "null" ] && GROUP=
     [ "$TAGPREFIX" = "null" ] && TAGPREFIX=
-    [ "$TAGIGNORE" = "null" ] && TAGIGNORE=
+    [ "$TAGIGNORE" = "null" ] && TAGIGNORE="alpha|beta|rc[0-9]"
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
     REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
     LOGFILE="$OUTPUTDIR/$ID.harvest.log"
