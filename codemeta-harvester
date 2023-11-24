@@ -611,7 +611,8 @@ harvest() {
         if ! "$SCRIPTDIR/ensure-no-stub.sh"; then
             info "Repository seems to be a stub and contains no actual code"
             #takes precedence even over codemeta.json!
-            echo "{ \"review\": { \"reviewRating\": \"1\", \"name\": \"Automatic software metadata validation report\", \"reviewBody\": \"Violation: Software metadata MUST be kept as close to the source code as possible, but this source code repository seems to be a stub without actual code. Please see https://github.com/CLARIAH/clariah-plus/blob/main/requirements/software-metadata-requirements.md\" } }" > "$CACHEDIR/tmp/04-stub.$ID.codemeta.json"
+            #this provides a a signal to the validator when writing the report
+            echo "{ \"https://github.com/proycon/codemetapy/stub\": 1 }" > "$CACHEDIR/tmp/04-stub.$ID.codemeta.json"
         fi
 
         if [ -n "$GROUP" ]; then
