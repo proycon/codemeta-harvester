@@ -355,7 +355,7 @@ harvest() {
             if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot | sort -rn | cut -f 2 | head -n 1 > "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR"; then
                 error "git shortlog failed"
             fi
-            info "Git top contributor $(cat "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR") will be assigned as author and maintainer if none are set explicitly in the metadata"
+            info "Git top contributor $(cat "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR") will be assigned as author and maintainer if none are found in the metadata"
             #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
             if ! codemetapy $CODEMETAPY_ARGS -O "$CACHEDIR/tmp/90-authors.$ID.codemeta.json" -i authors "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR" 2> "$TMPLOG" >&2; then
                 error "Parsing top contributor failed for $ID (codemetapy failed)"
