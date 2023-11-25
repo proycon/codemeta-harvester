@@ -8,7 +8,7 @@ SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
 #variants of README.md
-README="README.md README.rst README README.txt README.TXT readme.txt README.MD ReadMe.md readme.md"
+README="README.md README.rst README README.txt README.TXT readme.txt README.MD ReadMe.md readme.md README.adoc readme.adoc"
 
 die() {
     DEBUG=1
