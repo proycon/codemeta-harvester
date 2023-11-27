@@ -415,7 +415,7 @@ harvest() {
                 fi
                 if [ -e "$f" ]; then
                     info "Adding URL for found README: $f"
-                    case GIT_REMOTE_URL in
+                    case "$GIT_REMOTE_URL" in
                         *github*|*gitlab*)
                             echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$readmedir/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
                             ;;
@@ -441,7 +441,7 @@ harvest() {
                 fi
                 if [ -e "$f" ]; then
                     info "Found buildInstructions in $f"
-                    case GIT_REMOTE_URL in
+                    case "$GIT_REMOTE_URL" in
                         *github*|*gitlab*)
                             echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$readmedir/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
                             ;;
