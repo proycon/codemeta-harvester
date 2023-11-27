@@ -8,7 +8,7 @@ SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
 #variants of README.md
-README="README.md README.rst README README.txt README.TXT readme.txt README.MD ReadMe.md readme.md README.adoc readme.adoc"
+README="README.md README.rst README README.txt README.TXT readme.txt README.MD ReadMe.md readme.md README.adoc"
 
 die() {
     DEBUG=1
@@ -195,11 +195,17 @@ harvest() {
     info "Git reference: $REF"
     #ensure there is nothing left from previous runs (might happen if one was run with --keep)
     rm -rf "$CACHEDIR/tmp/"*".$ID.codemeta.json"
+    rootdir="$(pwd)"
     for scandir in $SCANDIRS; do
-        oldcwd="$(pwd)"
+        if [ -n "$rootdir" ]; then
+            if ! cd $rootdir; then
+                error "Unable to enter $rootdir"
+            fi
+        fi
+        absscandir=$(realpath "$scandir")
         [ ! -d "$scandir" ] && continue
-        info "Scanning directory $(realpath "$scandir") for harvestable resources..."
-        if ! cd "$scandir"; then
+        info "Scanning directory $absscandir for harvestable resources..."
+        if ! cd "$absscandir"; then
             error "Unable to enter $scandir"
             continue
         fi
@@ -231,7 +237,7 @@ harvest() {
 
             #If there is a codemeta-harvest.json, we will add it to
             #any other existing metadata that can be found
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -e codemeta-harvest.json ]; then
                 SUM=$(md5sum codemeta-harvest.json | cut -d " " -f 1)
                 info "found codemeta-harvest.json for $ID (md5sum $SUM); values in here take precendence over (override) those in later detection stages"
@@ -245,7 +251,7 @@ harvest() {
                 fi
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             for f in CITATION.cff CITATION.CFF CITATION; do
                 if [ -e "$f" ]; then
                     info "found CITATION.cff for $ID, converting to codemeta"
@@ -258,7 +264,7 @@ harvest() {
                 fi
             done
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -e setup.py ] || [ -e pyproject.toml ]; then
                 info "found python setup for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -269,7 +275,7 @@ harvest() {
                 flushlog
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -e pom.xml ]; then
                 info "found pom.xml (Java/Maven) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -280,7 +286,7 @@ harvest() {
                 flushlog
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -e package.json ]; then
                 info "found package.json (NodeJS) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -291,7 +297,7 @@ harvest() {
                 flushlog
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -e Cargo.toml ]; then
                 info "found Cargo.toml (rust) for $ID, converting to codemeta"
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -303,7 +309,7 @@ harvest() {
             fi
 
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             [ -e "$SCRIPTDIR/detect-license.sh" ] || die "Unable to find detect-license.sh in $SCRIPTDIR"
             info "Looking for license...."
             SPDX=$("$SCRIPTDIR/detect-license.sh" 2> "$TMPLOG")
@@ -315,7 +321,7 @@ harvest() {
             fi
             flushlog
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -f MAINTAINERS ]; then
                 info "Parsing MAINTAINERS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -325,7 +331,7 @@ harvest() {
                 flushlog
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -f AUTHORS ]; then
                 info "Parsing AUTHORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -335,7 +341,7 @@ harvest() {
                 flushlog
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -f CONTRIBUTORS ]; then
                 info "Parsing CONTRIBUTORS..."
                 #shellcheck disable=SC2086 #(allow globbing and splitting for $CODEMETAPY_ARGS)
@@ -360,7 +366,7 @@ harvest() {
             flushlog
 
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             info "Getting top contributor from git..."
             #Set up a fallback in case no authors are specified: simply assigns the top contributor
             if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot | sort -rn | cut -f 2 | head -n 1 > "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR"; then
@@ -372,7 +378,7 @@ harvest() {
                 error "Parsing top contributor failed for $ID (codemetapy failed)"
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             info "Extracting last and first commit date from git log...."
             #alternative: git shortlog --format=format:%cI | grep -vF '(' | sed 's/[[:space:]]//g' |  awk NF | tail -n 1 OR head -1
             DATE_UPDATED=$(git log -1 --date=format:"%Y-%m-%dT%TZ%z" --format="%ad")
@@ -398,12 +404,54 @@ harvest() {
                     ;;
             esac
 
+            #Add README URL
+            cd "$absscandir" || die "Unable to enter $scandir"
+            for f in $README; do
+                readmedir="$scandir"
+                if [ "$readmedir" = "." ]; then
+                    readmedir=""
+                else
+                    readmedir="$readmedir/"
+                fi
+                if [ -e "$f" ]; then
+                    info "Adding URL for found README: $f"
+                    case GIT_REMOTE_URL in
+                        *github*|*gitlab*)
+                            echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$readmedir/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
+                            ;;
+                        *bitbucket*)
+                            echo " { \"readme\": \"$GIT_REMOTE_URL/src/$REF/$readmedir/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
+                            ;;
+                        *)
+                            info "Unable to determine README URL (unknown remote url)"
+                            ;;
+                    esac
+                    break
+                fi
+            done
+
             #Add build instructions URL
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             for f in INSTALL.md INSTALL.rst INSTALL BUILD.md BUILD.rst BUILD INSTALL.MD; do
+                readmedir="$scandir"
+                if [ "$readmedir" = "." ]; then
+                    readmedir=""
+                else
+                    readmedir="$readmedir/"
+                fi
                 if [ -e "$f" ]; then
                     info "Found buildInstructions in $f"
-                    echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
+                    case GIT_REMOTE_URL in
+                        *github*|*gitlab*)
+                            echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/blob/$REF/$readmedir/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
+                            ;;
+                        *bitbucket*)
+                            echo " { \"buildInstructions\": \"$GIT_REMOTE_URL/src/$REF/$readmedir/$f\" }"  > "$CACHEDIR/tmp/42-buildinstructions.$ID.codemeta.json"
+                            ;;
+                        *)
+                            info "Unable to determine URL for $f (unknown remote url)"
+                            ;;
+                    esac
                     break
                 fi
             done
@@ -434,14 +482,14 @@ harvest() {
 
             
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if [ -e README.rst ] && [ ! -e README.md ]; then
                 info "Converting README.rst to README.md"
                 pandoc README.rst --to gfm -o README.md
                 CLEAN_README=1
             fi
 
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             for f in $README; do
                 if [ -e "$f" ]; then
 
@@ -506,7 +554,7 @@ harvest() {
             done
 
             #somef is optional because it relies on many dependencies that not everybody may want:
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if command -v somef 2> /dev/null >&2; then
                 for f in $README; do
                     if [ -e "$f" ]; then
@@ -529,7 +577,7 @@ harvest() {
             [ $CLEAN_README -eq 1 ] && rm README.md
 
 
-            cd "$oldcwd" || die "Unable to return to $oldcwd"
+            cd "$rootdir" || die "Unable to return to $rootdir"
         fi
 
         if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
@@ -541,8 +589,7 @@ harvest() {
 
             CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
             DEFAULT_BRANCH=$(git_default_branch)
-            oldcwd="$(pwd)"
-            cd "$scandir" || die "Unable to enter $scandir"
+            cd "$absscandir" || die "Unable to enter $scandir"
             if ! git checkout "$DEFAULT_BRANCH" 2> "$TMPLOG"; then
                 #fallback, stash and retry:
                 git stash -u 2>> "$TMPLOG"
@@ -593,17 +640,7 @@ harvest() {
         fi
 
 
-        #Add README URL
-        cd "$scandir" || die "Unable to enter $scandir"
-        for f in $README; do
-            if [ -e "$f" ]; then
-                info "Found $f"
-                echo " { \"readme\": \"$GIT_REMOTE_URL/blob/$REF/$f\" }"  > "$CACHEDIR/tmp/41-readme.$ID.codemeta.json"
-                break
-            fi
-        done
-
-        cd "$scandir" || die "Unable to enter $scandir"
+        cd "$absscandir" || die "Unable to enter $scandir"
         if ! "$SCRIPTDIR/ensure-no-stub.sh"; then
             info "Repository seems to be a stub and contains no actual code"
             #takes precedence even over codemeta.json!
@@ -626,7 +663,7 @@ harvest() {
                     continue
                 fi
             fi
-            cd "$oldcwd" || die "Unable to return to $oldcwd"
+            cd "$rootdir" || die "Unable to return to $rootdir"
         fi
     done
 
