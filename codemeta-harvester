@@ -351,7 +351,7 @@ harvest() {
             else
                 info "Getting contributors from git..."
                 #Get all authors from git (in order of nr of commits)
-                if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot |  sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"; then
+                if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "[bot]" | grep -v "dependabot" | grep -v "[bot]" | grep -v "badger@gitter.im" | grep -v dependabot |  sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"; then
                     error "git shortlog failed"
                 fi
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
@@ -369,7 +369,7 @@ harvest() {
             cd "$absscandir" || die "Unable to enter $scandir"
             info "Getting top contributor from git..."
             #Set up a fallback in case no authors are specified: simply assigns the top contributor
-            if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot | sort -rn | cut -f 2 | head -n 1 > "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR"; then
+            if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "[bot]" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot | sort -rn | cut -f 2 | head -n 1 > "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR"; then
                 error "git shortlog failed"
             fi
             info "Git top contributor $(cat "$CACHEDIR/tmp/$ID.TOPCONTRIBUTOR") will be assigned as author (and maintainer) if none are found in the metadata"
