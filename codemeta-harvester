@@ -3,7 +3,7 @@
 # This tool harvests software metadata from source code repositories and makes it available as codemeta
 #Files parsed: codemeta.json codemeta-harvest.json setup.py pyproject.toml pom.xml package.json README.md README.MD ReadMe.md readme.md README.rst README README.txt README.TXT CONTRIBUTORS AUTHORS MAINTAINERS CITATION.cff CITATION.CFF CITATION LICENSE LICENSE.md COPYING COPYRIGHT
 
-VERSION="0.3.8" #also update in codemeta.json
+VERSION="0.4.0" #also update in codemeta.json
 SCRIPTDIR="$(realpath "$(dirname "$0")")"
 DEBUG=0
 
@@ -220,7 +220,7 @@ harvest() {
             SUM=$(md5sum codemeta.json | cut -d " " -f 1)
             info "found codemeta.json for $ID (md5sum $SUM); **NOTE: this is considered authoritative and most other detection methods will be skipped now!**"
             #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
-            if dasel -n -f codemeta.json > /dev/null; then
+            if dasel -f codemeta.json > /dev/null; then
                 cp codemeta.json "$CACHEDIR/tmp/10-jsonld.$ID.codemeta.json"
                 #                               ^-- lowest number indicates highest priority
             else
@@ -242,7 +242,7 @@ harvest() {
                 SUM=$(md5sum codemeta-harvest.json | cut -d " " -f 1)
                 info "found codemeta-harvest.json for $ID (md5sum $SUM); values in here take precendence over (override) those in later detection stages"
                 #basic sanity check to see if the codemeta is well-formed (=no syntax errors)
-                if dasel -n -f codemeta-harvest.json > /dev/null; then
+                if dasel -f codemeta-harvest.json > /dev/null; then
                     cp codemeta-harvest.json "$CACHEDIR/tmp/10-harvest.$ID.codemeta.json"
                     #                               ^-- lowest number indicates highest priority
                 else
@@ -472,7 +472,7 @@ harvest() {
                     info "Querying Zenodo API for DOI (no access token provided)..."
                     Q="?"
                 fi
-                DOI=$(curl "https://zenodo.org/api/records/${Q}q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -p json -s ".hits.hits.[0].links.doi" | tr -d '"')
+                DOI=$(curl "https://zenodo.org/api/records/${Q}q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -r json -w - ".hits.hits.[0].links.doi" | tr -d '"')
                 if [ -n "$DOI" ]; then
                     info "Found DOI $DOI"
                     #takes precendence over codemeta.json (because it's impossible to include a codemeta.json with a DOI in a version tagged repo)
@@ -605,7 +605,7 @@ harvest() {
         info "Inferring repostatus information from git activity (used only as a fallback if not explicitly provided)..."
         DETECTED_VERSION=
         for f in $(find "$CACHEDIR/tmp/" -maxdepth 1 -name "*.$ID.codemeta.json" | sort); do
-            DETECTED_VERSION=$(dasel -f "$f" -s .version 2> /dev/null | tr -d '"')
+            DETECTED_VERSION=$(dasel -w - -f "$f" .version 2> /dev/null)
             [ -n "$DETECTED_VERSION" ] && break
         done
         REPOSTATUS=$("$SCRIPTDIR/detect-repostatus-from-git.sh" "$DETECTED_VERSION" 2> "$TMPLOG" | head -n 1)
@@ -676,7 +676,7 @@ harvest() {
 
     RESCAN=0
     for f in $files; do
-        if ! dasel -f "$f" -p json > /dev/null; then
+        if ! dasel -f "$f" -r json > /dev/null; then
             error "File $f is not valid JSON, removing..."
             rm "$f"
             RESCAN=1
@@ -757,19 +757,19 @@ process() {
         return 1
     fi
     CONFIGFILE="$1"
+    info "(any map index 'errors' below should be considered just as notices, they are expected!)"
     ID=$(basename "$CONFIGFILE" | sed -e 's/\.yaml//' -e 's/\.yml//')
-    SOURCEREPO=$(dasel --null -r yaml ".source" < "$CONFIGFILE")
-    ROOTPATH=$(dasel --null -r yaml ".root" < "$CONFIGFILE")
-    SCANDIRS=$(dasel --null -r yaml --plain ".scandirs" < "$CONFIGFILE" | tr -d "[]")
-    SERVICE_URLS=$(dasel --null -r yaml --plain ".services" < "$CONFIGFILE" | tr -d "[]")
-    GROUP=$(dasel --null -r yaml --plain ".group" < "$CONFIGFILE" | tr -d "[]")
-    TAGPREFIX=$(dasel --null -r yaml --plain ".tagprefix" < "$CONFIGFILE" | tr -d "[]")
-    TAGIGNORE=$(dasel --null -r yaml --plain ".tagignore" < "$CONFIGFILE" | tr -d "[]")
-    [ "$GROUP" = "null" ] && GROUP=
-    [ "$TAGPREFIX" = "null" ] && TAGPREFIX=
-    [ "$TAGIGNORE" = "null" ] && TAGIGNORE="alpha|beta|rc[0-9]"
+    SOURCEREPO=$(dasel -r yaml -w - ".source" < "$CONFIGFILE" || true)
+    ROOTPATH=$(dasel -r yaml -w - ".root" < "$CONFIGFILE" || true)
+    SCANDIRS=$(dasel  -r yaml -w - ".scandirs" < "$CONFIGFILE" | tr -d "[]" || true)
+    SERVICE_URLS=$(dasel -r yaml -w - ".services" < "$CONFIGFILE" | tr -d "[]" || true)
+    GROUP=$(dasel -r yaml -w - ".group" < "$CONFIGFILE" | tr -d "[]" || true)
+    TAGPREFIX=$(dasel -r yaml -w - ".tagprefix" < "$CONFIGFILE" | tr -d "[]" || true)
+    TAGIGNORE=$(dasel -r yaml -w - ".tagignore" < "$CONFIGFILE" | tr -d "[]" || true)
+    [ -z "$TAGPREFIX" ] && TAGPREFIX=
+    [ -z "$TAGIGNORE" ] && TAGIGNORE="alpha|beta|rc[0-9]"
     #Get the requested ref (branch or tag or commit) from the config (if present, otherwise the latest tag will be extracted automatically)
-    REF=$(dasel --null -r yaml ".ref" < "$CONFIGFILE")
+    REF=$(dasel -r yaml -w - ".ref" < "$CONFIGFILE")
     LOGFILE="$OUTPUTDIR/$ID.harvest.log"
     echo "(log file starts at $(date))" > "$LOGFILE"
     if [ -z "$SOURCEREPO" ] || [ "$SOURCEREPO" = "null" ]; then
