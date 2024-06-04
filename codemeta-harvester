@@ -467,12 +467,12 @@ harvest() {
             if [ -n "$REF" ] && [ "$REF" != "master" ] && [ "$REF" != "main" ]; then
                 if [ -n "$ZENODO_ACCESS_TOKEN" ]; then
                     info "Querying Zenodo API for DOI (access token provided)..."
-                    Q="?access_token=$ZENODO_ACCESS_TOKEN&"
+                    TOKEN_PARAM="--data access_token=$ZENODO_ACCESS_TOKEN"
                 else
                     info "Querying Zenodo API for DOI (no access token provided)..."
-                    Q="?"
+                    TOKEN_PARAM=
                 fi
-                DOI=$(curl "https://zenodo.org/api/records/${Q}q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -r json -w - ".hits.hits.[0].links.doi" | tr -d '"')
+                DOI=$(curl -L -G "https://zenodo.org/api/records/" $TOKEN_PARAM --data-urlencode "q=related.identifier:\"$GIT_REMOTE_URL/tree/$REF\"" | dasel -r json -w - ".hits.hits.[0].links.doi" | tr -d '"')
                 if [ -n "$DOI" ]; then
                     info "Found DOI $DOI"
                     #takes precendence over codemeta.json (because it's impossible to include a codemeta.json with a DOI in a version tagged repo)
