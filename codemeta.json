@@ -16,6 +16,7 @@
         "@type": "Person"
     },
     "@id": "https://github.com/proycon/codemeta-harvester.git",
+    "sameAs": "https://doi.org/10.5281/zenodo.10210562",
     "@type": "SoftwareSourceCode",
     "name": "codemeta-harvester",
     "version": "0.4.0",
