@@ -351,7 +351,7 @@ harvest() {
             else
                 info "Getting contributors from git..."
                 #Get all authors from git (in order of nr of commits)
-                if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "[bot]" | grep -v "dependabot" | grep -v "[bot]" | grep -v "badger@gitter.im" | grep -v dependabot |  sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"; then
+                if ! git log --pretty=short | git shortlog -s -e | grep -Fv "@noreply" | grep -v "snyk-bot" | grep -v "\[bot\]" | grep -v "dependabot" | grep -v "badger@gitter.im" | grep -v dependabot |  sort -rn | cut -f 2 > "$CACHEDIR/tmp/$ID.CONTRIBUTORS"; then
                     error "git shortlog failed"
                 fi
                 if [ -s "$CACHEDIR/tmp/$ID.CONTRIBUTORS" ]; then
